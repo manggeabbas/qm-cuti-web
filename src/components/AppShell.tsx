@@ -19,7 +19,7 @@ const NAV: NavItem[] = [
   { href: "/approval", label: "Approval", icon: "✅", roles: ["KOORDINATOR", "WAFOR", "FOREMAN", "SPV", "ADMIN"] },
   { href: "/kalender", label: "Kalender", icon: "📅" },
   { href: "/karyawan", label: "Karyawan", icon: "👥", roles: ["FOREMAN", "WAFOR", "KOORDINATOR", "SPV", "ADMIN"] },
-  { href: "/shift-off", label: "Shift & OFF", icon: "🕐", roles: ["FOREMAN", "WAFOR", "SPV", "ADMIN"] },
+  { href: "/shift-off", label: "Shift & OFF", icon: "🕐", roles: ["EMPLOYEE", "FOREMAN", "WAFOR", "SPV", "ADMIN"] },
   { href: "/laporan", label: "Laporan", icon: "📊", roles: ["SPV", "ADMIN"] },
   { href: "/notifikasi", label: "Notifikasi", icon: "🔔", roles: ["ADMIN"] },
   { href: "/organisasi", label: "Organisasi", icon: "🏢", roles: ["ADMIN"] },

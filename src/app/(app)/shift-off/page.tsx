@@ -8,11 +8,14 @@ interface Roster { id: number; date: string; team: { code: string; name: string 
 interface Off { id: number; date: string; kind: string; employee: { name: string; nik: string; team: { name: string } } }
 interface Team { id: number; code: string; name: string }
 
+const MANAGER_ROLES = ["ADMIN", "SPV", "FOREMAN", "WAFOR"];
+
 export default function ShiftOffPage() {
   const [tab, setTab] = useState<"roster" | "off">("roster");
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [offs, setOffs] = useState<Off[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -26,16 +29,21 @@ export default function ShiftOffPage() {
       const [y, m] = month.split("-").map(Number);
       const from = `${month}-01`;
       const to = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
-      const [rr, oo, tt] = await Promise.all([
+      const [rr, oo, tt, mm] = await Promise.all([
         fetch(`/api/shifts/rosters?from=${from}&to=${to}`).then((r) => r.json()),
         fetch(`/api/off?from=${from}&to=${to}`).then((r) => r.json()),
         fetch(`/api/org/teams`).then((r) => r.json()).catch(() => ({ ok: false })),
+        fetch(`/api/auth/me`).then((r) => r.json()).catch(() => ({ ok: false })),
       ]);
       if (!rr.ok) throw new Error(rr.error.message);
       if (!oo.ok) throw new Error(oo.error.message);
       setRosters(rr.data.rosters);
       setOffs(oo.data.items);
       if (tt.ok) setTeams(tt.data.items ?? tt.data);
+      if (mm.ok) {
+        const roles: string[] = mm.data.user?.roles ?? [];
+        setCanManage(roles.some((r) => MANAGER_ROLES.includes(r)));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memuat.");
     } finally {
@@ -113,7 +121,7 @@ export default function ShiftOffPage() {
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-slate-500">Rotasi 3 regu × 3 shift. Rabu = OFF bersama.</p>
-            <Button variant="secondary" onClick={generate}>Generate Otomatis</Button>
+            {canManage && <Button variant="secondary" onClick={generate}>Generate Otomatis</Button>}
           </div>
           {rosters.length === 0 ? (
             <EmptyState title="Belum ada roster" hint="Klik Generate Otomatis untuk membuat jadwal." />

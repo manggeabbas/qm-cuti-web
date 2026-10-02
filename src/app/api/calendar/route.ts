@@ -45,6 +45,18 @@ export async function GET(req: Request) {
 
     const holidays = await db.holiday.findMany({ where: { date: { gte: from, lte: to } } });
 
+    const rosters = await db.shiftRoster.findMany({
+      where: {
+        date: { gte: from, lte: to },
+        ...(teamId ? { teamId } : {}),
+      },
+      include: {
+        team: { select: { code: true, name: true } },
+        shiftType: { select: { code: true, name: true } },
+      },
+      orderBy: [{ date: "asc" }, { team: { code: "asc" } }],
+    });
+
     const events = [
       ...leaves.map((l) => {
         const mine = user.employeeId === l.employee.id;
@@ -80,6 +92,17 @@ export async function GET(req: Request) {
         status: null as string | null,
         employeeName: null as string | null,
         teamCode: null as string | null,
+        leaveType: null as string | null,
+      })),
+      ...rosters.map((r) => ({
+        id: `roster-${r.id}`,
+        title: `${r.team.name} — ${r.shiftType.name}`,
+        start: toISODate(r.date),
+        end: toISODate(r.date),
+        kind: "shift" as const,
+        status: null as string | null,
+        employeeName: null as string | null,
+        teamCode: r.team.code,
         leaveType: null as string | null,
       })),
     ];

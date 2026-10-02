@@ -24,7 +24,7 @@ interface CalEvent {
   title: string;
   start: string;
   end: string;
-  kind: "leave" | "off" | "holiday";
+  kind: "leave" | "off" | "holiday" | "shift";
   status?: string;
   employeeName?: string;
   teamCode?: string;
@@ -41,6 +41,7 @@ const KIND_META: Record<CalEvent["kind"], { label: string; dot: string; chip: st
   leave: { label: "Cuti", dot: "bg-blue-500", chip: "bg-blue-100 text-blue-800" },
   off: { label: "OFF", dot: "bg-yellow-500", chip: "bg-yellow-100 text-yellow-800" },
   holiday: { label: "Libur", dot: "bg-red-500", chip: "bg-red-100 text-red-800" },
+  shift: { label: "Shift", dot: "bg-purple-500", chip: "bg-purple-100 text-purple-800" },
 };
 
 const DAY_NAMES = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -138,7 +139,7 @@ export default function KalenderPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Kalender" subtitle="Jadwal cuti, OFF, dan hari libur." />
+      <PageHeader title="Kalender" subtitle="Jadwal cuti, OFF, shift, dan hari libur." />
 
       {/* Navigasi bulan */}
       <Card className="flex items-center justify-between">
@@ -244,7 +245,7 @@ export default function KalenderPage() {
             <Card>
               <p className="mb-2 font-bold text-slate-900">{formatDateID(selected)}</p>
               {selectedEvents.length === 0 ? (
-                <EmptyState title="Tidak ada jadwal" hint="Tidak ada cuti, OFF, atau libur pada tanggal ini." />
+                <EmptyState title="Tidak ada jadwal" hint="Tidak ada cuti, OFF, shift, atau libur pada tanggal ini." />
               ) : (
                 <div className="space-y-2">
                   {selectedEvents.map((e, i) => (
