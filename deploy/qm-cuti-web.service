@@ -1,0 +1,17 @@
+[Unit]
+Description=QM Cuti Web App (Next.js production)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hatch/workspace/qm-cuti-web
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=/home/hatch/workspace/qm-cuti-web/.env
+EnvironmentFile=/home/hatch/workspace/qm-cuti-web/deploy/proxy.env
+ExecStart=/usr/bin/node /home/hatch/workspace/qm-cuti-web/node_modules/.bin/next start -p 3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

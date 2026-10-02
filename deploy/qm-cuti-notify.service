@@ -1,0 +1,8 @@
+[Unit]
+Description=QM Cuti Web App notification worker
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/hatch/workspace/qm-cuti-web
+EnvironmentFile=/home/hatch/workspace/qm-cuti-web/deploy/proxy.env
+ExecStart=/home/hatch/workspace/qm-cuti-web/deploy/notify-worker.sh

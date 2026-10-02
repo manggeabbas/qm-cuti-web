@@ -1,0 +1,2 @@
+# Cron worker notifikasi — pasang dengan `crontab -e`:
+# * * * * * /home/hatch/workspace/qm-cuti-web/deploy/notify-worker.sh >> /home/hatch/workspace/qm-cuti-web/deploy/notify-worker.log 2>&1

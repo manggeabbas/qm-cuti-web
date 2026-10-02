@@ -1,0 +1,12 @@
+[Unit]
+Description=Tunnel publik Pinggy untuk QM Cuti Web App
+After=network.target qm-cuti-web.service
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /home/hatch/workspace/qm-cuti-web/deploy/pinggy-tunnel.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
