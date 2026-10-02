@@ -21,6 +21,7 @@ EOF
 }
 while true; do
   echo "[tunnel] menghubungkan..."
+  got_url=""
   timeout 3300 ssh -p 443 -R0:localhost:3000 \
     -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
     -o ConnectTimeout=45 -o ServerAliveInterval=20 -o ServerAliveCountMax=3 \
@@ -29,7 +30,9 @@ while true; do
     a.pinggy.io 2>&1 | while IFS= read -r line; do
       echo "$line"
       url=$(echo "$line" | grep -oE "https://[a-z0-9.-]+\.(pinggy-free\.link|free\.pinggy\.net)" | head -1)
-      if [ -n "$url" ]; then
+      # Hanya proses URL pertama per koneksi (pinggy mencetak 2 varian domain)
+      if [ -n "$url" ] && [ -z "$got_url" ]; then
+        got_url="$url"
         echo "$url" > "$URL_FILE"
         echo "[tunnel] URL publik: $url"
         update_app_url "$url"
