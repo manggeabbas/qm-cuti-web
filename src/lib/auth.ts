@@ -40,6 +40,12 @@ function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
 
+/** Cookie Secure hanya bila aplikasi diakses via HTTPS (atau dipaksa via COOKIE_SECURE).
+ * Jangan pakai flag Secure di atas HTTP biasa — browser akan menolak cookie sesi. */
+function isCookieSecure(): boolean {
+  if (process.env.COOKIE_SECURE !== undefined) return process.env.COOKIE_SECURE === "true";
+  return (process.env.APP_URL ?? "").startsWith("https://");
+}
 /** Buat sesi baru + set cookie httpOnly. Kembalikan token mentah (untuk testing). */
 export async function createSession(userId: number, meta?: { ipAddress?: string; userAgent?: string }): Promise<string> {
   const token = randomBytes(32).toString("hex");
@@ -50,7 +56,7 @@ export async function createSession(userId: number, meta?: { ipAddress?: string;
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isCookieSecure(),
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_DAYS * 86_400,
