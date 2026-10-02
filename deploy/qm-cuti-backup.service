@@ -1,0 +1,6 @@
+[Unit]
+Description=Backup database QM Cuti Web App
+
+[Service]
+Type=oneshot
+ExecStart=/home/hatch/workspace/qm-cuti-web/deploy/backup-db.sh
