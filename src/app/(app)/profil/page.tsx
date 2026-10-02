@@ -50,15 +50,17 @@ export default function ProfilPage() {
       const empId = user.employee?.id;
 
       const [rBal, rEmp] = await Promise.all([
-        fetchJson<LeaveBalance[]>(
+        fetchJson<{ balances: LeaveBalance[] } | LeaveBalance[]>(
           `/api/leave-balances?${empId ? `employeeId=${empId}&` : ""}year=${year}`
         ),
         empId
           ? fetchJson<EmployeeDetail>(`/api/employees/${empId}`)
           : Promise.resolve({ ok: true as const, data: null as EmployeeDetail | null }),
       ]);
-      if (rBal.ok) setBalances(rBal.data);
-      else setError(rBal.error.message);
+      if (rBal.ok) {
+        const d = rBal.data;
+        setBalances(Array.isArray(d) ? d : (d.balances ?? []));
+      } else setError(rBal.error.message);
       if (rEmp.ok && rEmp.data) setDetail(rEmp.data);
     })();
   }, []);

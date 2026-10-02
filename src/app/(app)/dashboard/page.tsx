@@ -64,15 +64,17 @@ export default function DashboardPage() {
       const year = new Date().getFullYear();
       const empId = user.employee?.id;
       const [rBal, rReq] = await Promise.all([
-        fetchJson<LeaveBalance[]>(
+        fetchJson<{ balances: LeaveBalance[] } | LeaveBalance[]>(
           `/api/leave-balances?${empId ? `employeeId=${empId}&` : ""}year=${year}`
         ),
         fetchJson<{ items: LeaveRequestItem[]; total: number } | LeaveRequestItem[]>(
           "/api/leave-requests?page=1&limit=100"
         ),
       ]);
-      if (rBal.ok) setBalances(rBal.data);
-      else setError(rBal.error.message);
+      if (rBal.ok) {
+        const d = rBal.data;
+        setBalances(Array.isArray(d) ? d : (d.balances ?? []));
+      } else setError(rBal.error.message);
       if (rReq.ok) {
         const items = Array.isArray(rReq.data) ? rReq.data : rReq.data.items;
         setRequests(items);
