@@ -41,3 +41,4 @@ yarn-error.log*
 next-env.d.ts
 storage
 deploy/tunnel-url.txt
+backups/
