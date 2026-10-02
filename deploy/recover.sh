@@ -32,7 +32,7 @@ if ! sudo -u postgres psql -lqt 2>/dev/null | cut -d'|' -f1 | grep -qw qm_cuti; 
   LATEST="$APP_DIR/backups/latest.dump"
   if [ -f "$LATEST" ]; then
     echo "Restore dari backup terbaru..."
-    DB_URL=$(grep -E '^DATABASE_URL=' .env | cut -d= -f2- | tr -d '"')
+    DB_URL=$(grep -E '^DATABASE_URL=' .env | cut -d= -f2- | tr -d '"' | sed 's/?[^?]*$//')
     pg_restore -d "$DB_URL" --clean --if-exists "$LATEST" 2>/dev/null \
       && echo "Restore OK" || echo "Restore gagal, lanjut migrate+seed"
   fi
@@ -40,7 +40,7 @@ if ! sudo -u postgres psql -lqt 2>/dev/null | cut -d'|' -f1 | grep -qw qm_cuti; 
     echo "Migrate GAGAL"; exit 1
   fi
   # Seed hanya jika tabel user kosong
-  DB_URL=$(grep -E '^DATABASE_URL=' .env | cut -d= -f2- | tr -d '"')
+  DB_URL=$(grep -E '^DATABASE_URL=' .env | cut -d= -f2- | tr -d '"' | sed 's/?[^?]*$//')
   COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM \"User\";" 2>/dev/null || echo 0)
   if [ "$COUNT" = "0" ]; then
     echo "Menjalankan seed data demo..."

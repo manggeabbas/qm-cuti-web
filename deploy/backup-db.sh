@@ -7,8 +7,9 @@ BACKUP_DIR="$APP_DIR/backups"
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 
-# Ambil DATABASE_URL dari .env tanpa menampilkannya
-DB_URL=$(grep -E '^DATABASE_URL=' "$APP_DIR/.env" | cut -d= -f2- | tr -d '"')
+# Ambil DATABASE_URL dari .env tanpa menampilkannya; buang query string (?schema=...)
+# karena pg_dump tidak memahaminya
+DB_URL=$(grep -E '^DATABASE_URL=' "$APP_DIR/.env" | cut -d= -f2- | tr -d '"' | sed 's/?[^?]*$//')
 if [ -z "$DB_URL" ]; then
   echo "[backup] DATABASE_URL tidak ditemukan, batal."
   exit 1
