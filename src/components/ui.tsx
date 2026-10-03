@@ -17,13 +17,13 @@ export function Button({
   size?: ButtonSize;
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg font-semibold whitespace-nowrap transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+    "inline-flex items-center justify-center gap-2 rounded-lg font-semibold whitespace-nowrap transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
   const sizes: Record<ButtonSize, string> = {
     sm: "px-3 py-1.5 text-xs",
     md: "px-4 py-2.5 text-sm",
   };
   const styles: Record<ButtonVariant, string> = {
-    primary: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+    primary: "bg-cyan-600 text-white hover:bg-cyan-700 shadow-sm",
     secondary: "bg-slate-100 text-slate-700 hover:bg-slate-200",
     outline: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
     danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
@@ -84,7 +84,7 @@ export function Field({ label, children, required }: { label: string; children: 
 }
 
 const inputCls =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-50 disabled:text-slate-500";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 disabled:bg-slate-50 disabled:text-slate-500";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputCls} ${props.className ?? ""}`} />;
@@ -168,7 +168,7 @@ export function Badge({ status, label }: { status: string; label?: string }) {
 export function Spinner() {
   return (
     <div className="flex items-center justify-center py-10" role="status" aria-live="polite">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-cyan-600" />
       <span className="sr-only">Memuat…</span>
     </div>
   );

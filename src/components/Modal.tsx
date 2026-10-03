@@ -51,7 +51,7 @@ export default function Modal({
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             ✕
           </button>

@@ -151,7 +151,7 @@ export default function PeriodTemplateTab({ canManage }: { canManage: boolean })
   return (
     <div className="space-y-4">
       {error && <ErrorBox message={error} />}
-      {success && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">{success}</div>}
+      {success && <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-sm text-cyan-700">{success}</div>}
 
       <Card>
         <div className="mb-3 flex items-center justify-between">

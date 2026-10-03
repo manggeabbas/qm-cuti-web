@@ -85,7 +85,7 @@ export default function ProfilPage() {
       {/* Data diri */}
       <Card>
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-100 text-3xl">
             👤
           </div>
           <div className="min-w-0">
@@ -136,9 +136,9 @@ export default function ProfilPage() {
                     <p className="text-[11px] uppercase text-slate-500">Pending</p>
                     <p className="font-bold text-slate-900">{fmtNum(b.pending ?? 0)}</p>
                   </div>
-                  <div className="rounded-xl bg-emerald-50 p-2">
-                    <p className="text-[11px] uppercase text-emerald-700">Tersedia</p>
-                    <p className="font-bold text-emerald-800">{fmtNum(b.available ?? 0)}</p>
+                  <div className="rounded-xl bg-cyan-50 p-2">
+                    <p className="text-[11px] uppercase text-cyan-700">Tersedia</p>
+                    <p className="font-bold text-cyan-800">{fmtNum(b.available ?? 0)}</p>
                   </div>
                 </div>
               </Card>

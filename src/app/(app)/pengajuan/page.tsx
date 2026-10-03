@@ -88,7 +88,7 @@ export default function PengajuanListPage() {
             onClick={() => setTab(t.key)}
             className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition ${
               tab === t.key
-                ? "bg-emerald-600 text-white"
+                ? "bg-cyan-600 text-white"
                 : "bg-white text-slate-600 ring-1 ring-slate-200"
             }`}
           >

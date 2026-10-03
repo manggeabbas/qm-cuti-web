@@ -41,7 +41,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-emerald-700 to-emerald-900 px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-cyan-700 to-blue-900 px-4">
       <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow">
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                className="absolute inset-y-0 right-0 my-auto mr-1 h-8 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-emerald-700"
+                className="absolute inset-y-0 right-0 my-auto mr-1 h-8 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-cyan-700"
               >
                 {showPassword ? "Sembunyikan" : "Lihat"}
               </button>

@@ -192,7 +192,7 @@ export default function ShiftOffPage() {
       <PageHeader title="Shift & OFF" subtitle="Pola rotasi shift regu dan hari OFF tetap karyawan" />
       {error && <div className="mb-3"><ErrorBox message={error} /></div>}
       {success && (
-        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+        <div className="mb-3 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-sm text-cyan-700">
           {success}
         </div>
       )}
@@ -203,7 +203,7 @@ export default function ShiftOffPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-              tab === t ? "bg-emerald-600 text-white" : "border border-slate-200 bg-white text-slate-600"
+              tab === t ? "bg-cyan-600 text-white" : "border border-slate-200 bg-white text-slate-600"
             }`}
           >
             {t === "roster" ? "Jadwal Shift" : t === "periode" ? "Periode & Template" : "Hari OFF"}
@@ -414,7 +414,7 @@ export default function ShiftOffPage() {
                         {e.offDayOfWeek == null ? (
                           <span className="text-slate-400">Belum diatur</span>
                         ) : (
-                          <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                          <span className="rounded bg-cyan-100 px-2 py-0.5 text-xs font-semibold text-cyan-800">
                             {DOW_FULL[e.offDayOfWeek]}
                           </span>
                         )}

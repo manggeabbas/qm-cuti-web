@@ -94,7 +94,7 @@ export default function OffSayaPage() {
       />
       {error && <div className="mb-3"><ErrorBox message={error} /></div>}
       {success && (
-        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+        <div className="mb-3 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-sm text-cyan-700">
           {success}
         </div>
       )}
@@ -121,12 +121,12 @@ export default function OffSayaPage() {
                     onClick={() => setDay(c.dow)}
                     className={`rounded-lg border px-2 py-3 text-center transition disabled:opacity-60 ${
                       active
-                        ? "border-emerald-500 bg-emerald-600 text-white"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50"
+                        ? "border-cyan-500 bg-cyan-600 text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50/50"
                     }`}
                   >
                     <span className="block text-sm font-semibold">{c.label}</span>
-                    <span className={`mt-0.5 block text-[10px] ${active ? "text-emerald-50" : "text-slate-400"}`}>
+                    <span className={`mt-0.5 block text-[10px] ${active ? "text-cyan-50" : "text-slate-400"}`}>
                       {count} org
                     </span>
                   </button>
@@ -157,7 +157,7 @@ export default function OffSayaPage() {
                   {previewDates.map((iso) => (
                     <span
                       key={iso}
-                      className="rounded-lg bg-emerald-100 px-3 py-1.5 text-sm font-medium text-emerald-800"
+                      className="rounded-lg bg-cyan-100 px-3 py-1.5 text-sm font-medium text-cyan-800"
                     >
                       {formatID(iso)}
                     </span>

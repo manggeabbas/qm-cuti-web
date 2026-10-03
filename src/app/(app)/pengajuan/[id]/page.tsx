@@ -188,7 +188,7 @@ export default function PengajuanDetailPage() {
                   <div
                     className={`h-3 w-3 rounded-full ${
                       a.action === "APPROVED" || a.status === "APPROVED"
-                        ? "bg-emerald-500"
+                        ? "bg-cyan-500"
                         : a.action === "REJECTED" || a.status === "REJECTED"
                           ? "bg-red-500"
                           : "bg-amber-400"

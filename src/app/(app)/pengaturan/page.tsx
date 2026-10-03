@@ -59,7 +59,7 @@ export default function PengaturanPage() {
 
       <ErrorBox message={error} />
       {notice && (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+        <div className="mb-4 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-sm text-cyan-700">
           {notice}
         </div>
       )}

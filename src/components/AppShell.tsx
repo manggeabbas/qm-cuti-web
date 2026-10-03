@@ -57,8 +57,8 @@ function isActivePath(pathname: string, href: string): boolean {
 }
 
 function navLinkCls(active: boolean): string {
-  return `relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-    active ? "bg-emerald-50 text-emerald-800" : "text-slate-600 hover:bg-slate-100"
+  return `relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+    active ? "bg-cyan-50 text-cyan-800" : "text-slate-600 hover:bg-slate-100"
   }`;
 }
 
@@ -90,7 +90,7 @@ function NavLinks({
                   className={navLinkCls(active)}
                 >
                   {active && (
-                    <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-emerald-600" aria-hidden />
+                    <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-cyan-600" aria-hidden />
                   )}
                   <span className="text-base">{n.icon}</span> {n.label}
                 </Link>
@@ -140,7 +140,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
         </Link>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           aria-label="Buka menu"
           aria-expanded={menuOpen}
         >
@@ -160,7 +160,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
         <NavLinks sections={visibleSections} pathname={pathname} />
         <div className="mt-3 border-t border-slate-100 pt-3">
           <div className="flex items-center gap-3 px-2 py-1">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-xs font-bold text-cyan-700">
               {initials || "?"}
             </div>
             <div className="min-w-0">
@@ -184,7 +184,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
           <div className="absolute right-0 top-0 flex h-full w-72 flex-col bg-white p-3 shadow-xl">
             <div className="mb-3 flex items-center justify-between border-b border-slate-100 px-2 pb-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-100 text-xs font-bold text-cyan-700">
                   {initials || "?"}
                 </div>
                 <div className="min-w-0">
@@ -229,8 +229,8 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
                 key={n.href}
                 href={n.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-1 flex-col items-center rounded-lg px-2 py-1.5 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                  active ? "text-emerald-700" : "text-slate-500"
+                className={`flex flex-1 flex-col items-center rounded-lg px-2 py-1.5 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                  active ? "text-cyan-700" : "text-slate-500"
                 }`}
               >
                 <span className="text-xl">{n.icon}</span>
@@ -242,7 +242,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
             <button
               onClick={() => setMenuOpen(true)}
               aria-label="Menu lainnya"
-              className="flex flex-1 flex-col items-center rounded-lg px-2 py-1.5 text-[11px] font-medium text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              className="flex flex-1 flex-col items-center rounded-lg px-2 py-1.5 text-[11px] font-medium text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             >
               <span className="text-xl">☰</span>
               Lainnya

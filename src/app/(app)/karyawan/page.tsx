@@ -560,7 +560,7 @@ export default function KaryawanPage() {
                   <p className="text-slate-600">
                     <span className="line-through text-slate-400">{h.oldLabel ?? "—"}</span>
                     {" → "}
-                    <span className="font-semibold text-emerald-700">{h.newLabel ?? "—"}</span>
+                    <span className="font-semibold text-cyan-700">{h.newLabel ?? "—"}</span>
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
                     {new Date(h.createdAt).toLocaleString("id-ID")}

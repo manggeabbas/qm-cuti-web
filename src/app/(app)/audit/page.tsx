@@ -170,7 +170,7 @@ export default function AuditPage() {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => setExpanded(expanded === it.id ? null : it.id)}
-                        className="text-xs font-semibold text-emerald-700 hover:underline"
+                        className="text-xs font-semibold text-cyan-700 hover:underline"
                       >
                         {expanded === it.id ? "Tutup" : "Lihat"}
                       </button>

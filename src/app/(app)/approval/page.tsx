@@ -130,7 +130,7 @@ export default function ApprovalPage() {
             <Button disabled={acting} variant="secondary" onClick={() => act("return")}>Revisi</Button>
           </div>
           <div className="mt-3 flex items-center justify-between gap-2">
-            <Link href={`/pengajuan/${selected.id}`} className="text-xs font-semibold text-emerald-700 hover:underline">
+            <Link href={`/pengajuan/${selected.id}`} className="text-xs font-semibold text-cyan-700 hover:underline">
               Lihat detail lengkap ›
             </Link>
             <Button variant="ghost" onClick={() => setSelected(null)}>Batal</Button>

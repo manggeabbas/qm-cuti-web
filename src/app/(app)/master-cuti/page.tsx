@@ -504,7 +504,7 @@ export default function MasterCutiPage() {
             key={k}
             onClick={() => setActive(k)}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              active === k ? "bg-emerald-600 text-white" : "bg-white text-slate-600 border border-slate-200"
+              active === k ? "bg-cyan-600 text-white" : "bg-white text-slate-600 border border-slate-200"
             }`}
           >
             {label}

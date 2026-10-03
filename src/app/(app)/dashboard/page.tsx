@@ -190,7 +190,7 @@ export default function DashboardPage() {
             <Link
               key={a.label}
               href={a.href}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-3 text-center shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50/40 active:scale-[0.98]"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-3 text-center shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50/40 active:scale-[0.98]"
             >
               <span className="text-2xl">{a.icon}</span>
               <span className="text-xs font-semibold text-slate-700">{a.label}</span>
@@ -239,7 +239,7 @@ export default function DashboardPage() {
                 <div
                   key={iso}
                   className={`rounded-lg border p-1 text-center ${
-                    isToday ? "border-emerald-400 bg-emerald-50/60" : "border-slate-100"
+                    isToday ? "border-cyan-400 bg-cyan-50/60" : "border-slate-100"
                   }`}
                   title={shift ? `${shift.name} ${shift.startTime ?? ""}–${shift.endTime ?? ""}` : undefined}
                 >
@@ -335,7 +335,7 @@ export default function DashboardPage() {
       <Card
         title="Pengajuan terbaru"
         action={
-          <Link href="/pengajuan" className="text-xs font-semibold text-emerald-700 hover:underline">
+          <Link href="/pengajuan" className="text-xs font-semibold text-cyan-700 hover:underline">
             Lihat semua ›
           </Link>
         }

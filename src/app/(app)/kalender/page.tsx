@@ -46,7 +46,7 @@ const KIND_META: Record<CalEvent["kind"], { label: string; dot: string; chip: st
   leave: { label: "Cuti", dot: "bg-blue-500", chip: "bg-blue-100 text-blue-800" },
   off: { label: "OFF", dot: "bg-yellow-500", chip: "bg-yellow-100 text-yellow-800" },
   holiday: { label: "Libur", dot: "bg-red-500", chip: "bg-red-100 text-red-800" },
-  shift: { label: "Shift", dot: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-800" },
+  shift: { label: "Shift", dot: "bg-cyan-500", chip: "bg-cyan-100 text-cyan-800" },
 };
 
 const DAY_NAMES = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -235,7 +235,7 @@ export default function KalenderPage() {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold ${view === v ? "bg-emerald-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold ${view === v ? "bg-cyan-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}
           >
             {v === "month" ? "Bulan" : v === "week" ? "Minggu" : "Hari"}
           </button>
@@ -282,13 +282,13 @@ export default function KalenderPage() {
                     key={iso}
                     onClick={() => { setSelected(iso); setView("day"); }}
                     className={`flex min-h-24 flex-col rounded-lg p-1.5 text-left text-xs transition ${
-                      isSel ? "bg-emerald-100 ring-2 ring-emerald-500" : "bg-slate-50 hover:bg-slate-100"
+                      isSel ? "bg-cyan-100 ring-2 ring-cyan-500" : "bg-slate-50 hover:bg-slate-100"
                     }`}
                   >
-                    <span className={`text-[10px] font-bold uppercase ${isToday ? "text-emerald-700" : "text-slate-400"}`}>
+                    <span className={`text-[10px] font-bold uppercase ${isToday ? "text-cyan-700" : "text-slate-400"}`}>
                       {DAY_NAMES[(d.getDay() + 6) % 7]}
                     </span>
-                    <span className={`text-base font-bold ${isToday ? "text-emerald-700" : "text-slate-800"}`}>
+                    <span className={`text-base font-bold ${isToday ? "text-cyan-700" : "text-slate-800"}`}>
                       {d.getDate()}
                     </span>
                     <span className="mt-1 space-y-0.5 overflow-hidden">
@@ -357,7 +357,7 @@ export default function KalenderPage() {
                     key={iso}
                     onClick={() => setSelected(iso)}
                     className={`flex min-h-14 flex-col items-center justify-start rounded-lg p-1 text-xs transition sm:min-h-16 sm:p-1.5 ${
-                      isSel ? "ring-2 ring-emerald-500 " : ""
+                      isSel ? "ring-2 ring-cyan-500 " : ""
                     }${
                       inMonth
                         ? cat

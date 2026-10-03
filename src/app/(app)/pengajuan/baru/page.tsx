@@ -229,7 +229,7 @@ export default function PengajuanBaruPage() {
       <Card className="space-y-4">
         {err && <ErrorBox message={err} />}
         {okMsg && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
+          <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-sm text-cyan-800">
             {okMsg}
           </div>
         )}
@@ -260,7 +260,7 @@ export default function PengajuanBaruPage() {
         </Field>
 
         {isCfv && (
-          <label className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm">
+          <label className="flex items-start gap-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-sm">
             <input
               type="checkbox"
               className="mt-0.5"
@@ -268,9 +268,9 @@ export default function PengajuanBaruPage() {
               onChange={(e) => setPackageMode(e.target.checked)}
             />
             <span>
-              <span className="font-semibold text-emerald-900">Ajukan paket CFV + CT</span>
+              <span className="font-semibold text-cyan-900">Ajukan paket CFV + CT</span>
               <br />
-              <span className="text-emerald-800">
+              <span className="text-cyan-800">
                 CFV 12 hari dilanjutkan CT (maks 4 hari, tanggal bersambungan).
               </span>
             </span>
@@ -307,8 +307,8 @@ export default function PengajuanBaruPage() {
         </Field>
 
         {packageMode && isCfv && (
-          <Card className="border-emerald-200 bg-emerald-50/60 !p-3">
-            <p className="mb-2 text-sm font-bold text-emerald-900">Ringkasan Paket</p>
+          <Card className="border-cyan-200 bg-cyan-50/60 !p-3">
+            <p className="mb-2 text-sm font-bold text-cyan-900">Ringkasan Paket</p>
             <div className="space-y-1 text-sm text-slate-700">
               <p>
                 <span className="font-semibold">CFV (12 hari):</span>{" "}
