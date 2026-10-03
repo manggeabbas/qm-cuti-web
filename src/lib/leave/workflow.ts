@@ -62,6 +62,15 @@ const STEP_ROLE_TO_STATUS: Record<WorkflowStepRole, RequestStatus> = {
   [WorkflowStepRole.SPV]: RequestStatus.PENDING_SPV,
 };
 
+/** Jenjang tiap stepRole (diselaraskan dengan Position.levelOrder di seed). */
+const STEP_ROLE_LEVEL: Record<WorkflowStepRole, number> = {
+  [WorkflowStepRole.KOORDINATOR]: 30,
+  [WorkflowStepRole.WAFOR]: 35,
+  [WorkflowStepRole.FOREMAN]: 40,
+  [WorkflowStepRole.WSPV]: 55,
+  [WorkflowStepRole.SPV]: 60,
+};
+
 /** status pending -> stepRole (fallback bila workflow tidak terlampir) */
 const STATUS_TO_STEP_ROLE: Partial<Record<RequestStatus, WorkflowStepRole>> = {
   [RequestStatus.PENDING_FOREMAN]: WorkflowStepRole.FOREMAN,
@@ -383,7 +392,17 @@ export async function submitRequest(requestId: number, user: SessionUser) {
   }
 
   const wf = await resolveWorkflow(req.employeeId);
-  const first = wf.steps[0];
+  // Lewati step yang jenjangnya <= jabatan pemohon (mis. foreman langsung ke SPV).
+  // Bila tidak ada step yang lebih tinggi (mis. SPV), mulai dari step tertinggi
+  // agar tetap ada yang menyetujui (tidak auto-approve).
+  const requester = await db.employee.findUnique({
+    where: { id: req.employeeId },
+    include: { position: { select: { levelOrder: true } } },
+  });
+  const requesterLevel = requester?.position.levelOrder ?? 0;
+  const first =
+    wf.steps.find((s) => (STEP_ROLE_LEVEL[s.role] ?? 0) > requesterLevel) ??
+    wf.steps[wf.steps.length - 1];
   const newStatus = STEP_ROLE_TO_STATUS[first.role];
 
   const updated = await db.$transaction(async (tx) => {
