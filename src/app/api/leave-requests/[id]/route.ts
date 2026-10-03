@@ -53,7 +53,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!canViewRequest(user, item)) {
       throw new ApiError("FORBIDDEN", "Anda tidak memiliki akses ke pengajuan ini.", 403);
     }
-    return ok({ request: item });
+    return ok(item);
   } catch (e) {
     return toErrorResponse(e);
   }
