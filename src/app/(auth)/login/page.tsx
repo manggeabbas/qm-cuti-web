@@ -44,8 +44,8 @@ export default function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-emerald-700 to-emerald-900 px-4">
       <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-2xl text-white">
-            📋
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow">
+            <img src="/logo.png" alt="TTRI" className="h-12 w-12 object-contain" />
           </div>
           <h1 className="text-xl font-bold text-slate-900">TTRI</h1>
           <p className="mt-1 text-sm text-slate-500">Pengajuan Cuti, Izin & Monitoring Jadwal</p>

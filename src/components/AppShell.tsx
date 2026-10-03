@@ -135,7 +135,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
       {/* Header mobile */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-sm text-white">📋</span>
+          <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-white"><img src="/logo.png" alt="TTRI" className="h-7 w-7 object-contain" /></span>
           <span className="font-bold text-slate-800">TTRI</span>
         </Link>
         <button
@@ -151,7 +151,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
       {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r border-slate-200 bg-white p-3 lg:flex">
         <Link href="/dashboard" className="mb-4 flex items-center gap-2 rounded-lg px-2 py-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-lg text-white">📋</span>
+          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white"><img src="/logo.png" alt="TTRI" className="h-9 w-9 object-contain" /></span>
           <div>
             <p className="text-sm font-bold leading-tight text-slate-800">TTRI</p>
             <p className="text-[11px] text-slate-400">Leave Management</p>
