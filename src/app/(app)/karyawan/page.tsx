@@ -21,6 +21,11 @@ import type { RoleName } from "@prisma/client";
 
 type Me = { id: number; username: string; roles: RoleName[] };
 
+interface HistItem {
+  id: number; fieldLabel: string; oldLabel: string | null; newLabel: string | null;
+  effectiveDate: string | null; changedBy: string | null; createdAt: string;
+}
+
 interface Employee {
   id: number;
   nik: string;
@@ -89,6 +94,24 @@ export default function KaryawanPage() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [histOpen, setHistOpen] = useState(false);
+  const [histEmp, setHistEmp] = useState<Employee | null>(null);
+  const [histItems, setHistItems] = useState<HistItem[]>([]);
+  const [histLoading, setHistLoading] = useState(false);
+
+  async function openHistory(e: Employee) {
+    setHistEmp(e);
+    setHistOpen(true);
+    setHistLoading(true);
+    try {
+      const d = await api<{ items: HistItem[] }>(`/api/employees/${e.id}/history`);
+      setHistItems(d.items);
+    } catch {
+      setHistItems([]);
+    } finally {
+      setHistLoading(false);
+    }
+  }
   const [formError, setFormError] = useState("");
 
   const isAdmin = !!me && hasRole(me, "ADMIN");
@@ -312,6 +335,9 @@ export default function KaryawanPage() {
                   {isAdmin && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
+                        <Button variant="secondary" onClick={() => openHistory(e)} className="px-3 py-1.5 text-xs">
+                          Riwayat
+                        </Button>
                         <Button variant="secondary" onClick={() => openEdit(e)} className="px-3 py-1.5 text-xs">
                           Ubah
                         </Button>
@@ -435,6 +461,34 @@ export default function KaryawanPage() {
               {saving ? "Menyimpan…" : "Simpan"}
             </Button>
           </div>
+        </Modal>
+      )}
+
+      {histOpen && histEmp && (
+        <Modal title={`Riwayat — ${histEmp.name}`} onClose={() => setHistOpen(false)} wide>
+          {histLoading ? (
+            <Spinner />
+          ) : histItems.length === 0 ? (
+            <EmptyState title="Belum ada riwayat" hint="Perubahan data karyawan akan tercatat di sini." />
+          ) : (
+            <div className="space-y-2">
+              {histItems.map((h) => (
+                <div key={h.id} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                  <p className="font-semibold text-slate-900">{h.fieldLabel}</p>
+                  <p className="text-slate-600">
+                    <span className="line-through text-slate-400">{h.oldLabel ?? "—"}</span>
+                    {" → "}
+                    <span className="font-semibold text-emerald-700">{h.newLabel ?? "—"}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    {new Date(h.createdAt).toLocaleString("id-ID")}
+                    {h.changedBy && ` · oleh ${h.changedBy}`}
+                    {h.effectiveDate && ` · efektif ${h.effectiveDate}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </Modal>
       )}
     </div>

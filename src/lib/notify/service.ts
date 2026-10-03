@@ -69,8 +69,18 @@ export async function resolveApproverEmployeeIds(
     where = { ...where, teamId: emp.teamId, position: { code: { in: ["FOREMAN", "WAFOR"] } } };
   } else if (stepRole === "KOORDINATOR") {
     where = { ...where, sectionId: emp.sectionId, position: { code: "KOORDINATOR" } };
-  } else if (stepRole === "SPV") {
-    where = { ...where, departmentId: emp.departmentId, position: { code: { in: ["SPV", "WAKIL_SPV"] } } };
+  } else if (stepRole === "SPV" || stepRole === "WSPV") {
+    // SPV & WSPV pada posisi alternatif: keduanya menerima notifikasi,
+    // salah satu approval cukup (PRD §1A.10)
+    const spvIds = await db.employee.findMany({
+      where: { ...where, departmentId: emp.departmentId, position: { code: { in: ["SPV", "WAKIL_SPV"] } } } as never,
+      select: { id: true },
+    });
+    const wspvIds = await db.employee.findMany({
+      where: { ...where, divisionId: emp.divisionId, position: { code: { in: ["WAKIL_SPV", "SPV"] } } } as never,
+      select: { id: true },
+    });
+    return [...new Set([...spvIds, ...wspvIds].map((a) => a.id))];
   }
   const approvers = await db.employee.findMany({ where: where as never, select: { id: true } });
   return approvers.map((a) => a.id);
@@ -108,7 +118,7 @@ export async function enqueueLeaveEvent(
       case "LEAVE_SUBMITTED":
       case "APPROVAL_REQUIRED": {
         const stepLabel =
-          extra?.stepRole === "SPV" ? "SPV" : extra?.stepRole === "KOORDINATOR" ? "Koordinator" : "Foreman/Wafor";
+          extra?.stepRole === "SPV" || extra?.stepRole === "WSPV" ? "SPV/WSPV" : extra?.stepRole === "KOORDINATOR" ? "Koordinator" : "Foreman/Wafor";
         await createNotifications({
           event,
           requestId,
@@ -129,7 +139,7 @@ export async function enqueueLeaveEvent(
         });
         if (extra?.nextStepRole) {
           const stepLabel =
-            extra.nextStepRole === "SPV" ? "SPV" : extra.nextStepRole === "KOORDINATOR" ? "Koordinator" : "Foreman/Wafor";
+            extra.nextStepRole === "SPV" || extra.nextStepRole === "WSPV" ? "SPV/WSPV" : extra.nextStepRole === "KOORDINATOR" ? "Koordinator" : "Foreman/Wafor";
           await createNotifications({
             event: "APPROVAL_REQUIRED",
             requestId,

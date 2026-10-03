@@ -1,4 +1,5 @@
 import { z } from "zod";
+import db from "@/lib/db";
 import { ok, fail, toErrorResponse } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { requireRole } from "@/lib/rbac";
@@ -15,9 +16,19 @@ const schema = z.object({
 export async function POST(req: Request) {
   try {
     const user = await requireUser();
-    requireRole(user, "ADMIN", "SPV", "FOREMAN");
+    requireRole(user, "ADMIN", "SPV", "WSPV", "FOREMAN");
     const body = schema.parse(await req.json());
-    const result = await generateRoster(parseISODate(body.from), parseISODate(body.to));
+    const from = parseISODate(body.from);
+    const to = parseISODate(body.to);
+    // tolak bila ada periode terkunci yang beririsan dengan rentang
+    const locked = await db.shiftSchedulePeriod.findFirst({
+      where: { status: "LOCKED", from: { lte: to }, to: { gte: from } },
+      select: { id: true, name: true },
+    });
+    if (locked) {
+      return fail("SCHEDULE_LOCKED", `Rentang beririsan dengan periode terkunci "${locked.name}".`, 403);
+    }
+    const result = await generateRoster(from, to);
     await auditLog({ userId: user.id, action: "GENERATE_SHIFT_ROSTER", entityType: "ShiftRoster", newValue: { ...body, ...result }, ...getRequestMeta(req) });
     return ok(result);
   } catch (e) {

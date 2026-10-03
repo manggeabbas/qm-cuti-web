@@ -37,6 +37,7 @@ interface EmpOption {
 const ROLES: { value: RoleName; label: string }[] = [
   { value: "ADMIN", label: "Admin" },
   { value: "SPV", label: "SPV" },
+  { value: "WSPV", label: "WSPV" },
   { value: "FOREMAN", label: "Foreman" },
   { value: "WAFOR", label: "Wafor" },
   { value: "KOORDINATOR", label: "Koordinator" },

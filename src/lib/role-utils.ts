@@ -1,7 +1,7 @@
 /** Util role murni — TANPA dependensi server, aman dipakai di client component. */
 import type { RoleName } from "@prisma/client";
 
-export const ROLE_HIERARCHY: RoleName[] = ["EMPLOYEE", "KOORDINATOR", "WAFOR", "FOREMAN", "SPV", "ADMIN"];
+export const ROLE_HIERARCHY: RoleName[] = ["EMPLOYEE", "KOORDINATOR", "WAFOR", "FOREMAN", "WSPV", "SPV", "ADMIN"];
 
 export function highestRole(roles: RoleName[]): RoleName {
   let best: RoleName = "EMPLOYEE";

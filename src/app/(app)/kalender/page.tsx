@@ -54,10 +54,65 @@ function monthTitle(y: number, m: number): string {
   }).format(new Date(y, m, 1));
 }
 
+/** Agenda satu hari penuh. */
+function DayAgenda({ date, events, onPickDate }: { date: string; events: CalEvent[]; onPickDate: (d: string) => void }) {
+  return (
+    <div className="space-y-3">
+      <Card className="flex items-center justify-between">
+        <button
+          onClick={() => onPickDate(addDaysISO(date, -1))}
+          className="rounded-xl px-3 py-2 text-xl text-slate-600 hover:bg-slate-100"
+          aria-label="Hari sebelumnya"
+        >
+          ‹
+        </button>
+        <p className="font-bold text-slate-900">{formatDateID(date)}</p>
+        <button
+          onClick={() => onPickDate(addDaysISO(date, 1))}
+          className="rounded-xl px-3 py-2 text-xl text-slate-600 hover:bg-slate-100"
+          aria-label="Hari berikutnya"
+        >
+          ›
+        </button>
+      </Card>
+      <Card>
+        {events.length === 0 ? (
+          <EmptyState title="Tidak ada jadwal" hint="Tidak ada cuti, OFF, shift, atau libur pada tanggal ini." />
+        ) : (
+          <div className="space-y-2">
+            {events.map((e, i) => (
+              <div key={`${e.id}-${i}`} className="flex items-start justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900">{e.title}</p>
+                  <p className="text-xs text-slate-500">
+                    {[e.employeeName, e.teamCode, e.leaveType].filter(Boolean).join(" · ") || e.kind}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${KIND_META[e.kind]?.chip ?? "bg-slate-100 text-slate-700"}`}>
+                  {KIND_META[e.kind]?.label ?? e.kind}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      <div className="flex flex-wrap gap-3 px-1 text-xs text-slate-600">
+        {(Object.keys(KIND_META) as CalEvent["kind"][]).map((k) => (
+          <span key={k} className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${KIND_META[k].dot}`} />
+            {KIND_META[k].label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function KalenderPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+  const [view, setView] = useState<"month" | "week" | "day">("month");
   const [events, setEvents] = useState<CalEvent[] | null>(null);
   const [notReady, setNotReady] = useState(false);
   const [error, setError] = useState("");
@@ -70,7 +125,7 @@ export default function KalenderPage() {
     (async () => {
       const r = await fetchJson<{ user: MeUser }>("/api/auth/me");
       if (!r.ok) return;
-      if (hasRole(r.data.user, "FOREMAN", "WAFOR", "KOORDINATOR", "SPV", "ADMIN")) {
+      if (hasRole(r.data.user, "FOREMAN", "WAFOR", "KOORDINATOR", "WSPV", "SPV", "ADMIN")) {
         const rt = await fetchJson<Team[] | { items: Team[] }>("/api/org/teams");
         if (rt.ok) {
           const d = rt.data;
@@ -89,6 +144,15 @@ export default function KalenderPage() {
     for (let i = 0; i < 42; i++) arr.push(addDaysISO(gridStart, i));
     return { cells: arr, rangeFrom: arr[0], rangeTo: arr[41] };
   }, [year, month]);
+
+  /* Sel minggu berjalan (Senin–Minggu) berdasar tanggal terpilih / hari ini */
+  const weekCells = useMemo(() => {
+    const anchor = selected ?? toISODate(new Date());
+    const d = parseISODate(anchor);
+    const lead = (d.getDay() + 6) % 7;
+    const start = addDaysISO(anchor, -lead);
+    return Array.from({ length: 7 }, (_, i) => addDaysISO(start, i));
+  }, [selected]);
 
   /* Muat event tiap ganti bulan / filter regu */
   useEffect(() => {
@@ -142,7 +206,7 @@ export default function KalenderPage() {
       <PageHeader title="Kalender" subtitle="Jadwal cuti, OFF, shift, dan hari libur." />
 
       {/* Navigasi bulan */}
-      <Card className="flex items-center justify-between">
+      <Card className="flex items-center justify-between gap-2">
         <button
           onClick={() => nav(-1)}
           className="rounded-xl px-3 py-2 text-xl text-slate-600 hover:bg-slate-100"
@@ -159,6 +223,19 @@ export default function KalenderPage() {
           ›
         </button>
       </Card>
+
+      {/* Pilihan tampilan */}
+      <div className="flex gap-2">
+        {(["month", "week", "day"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold ${view === v ? "bg-emerald-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}
+          >
+            {v === "month" ? "Bulan" : v === "week" ? "Minggu" : "Hari"}
+          </button>
+        ))}
+      </div>
 
       {/* Filter regu (approver) */}
       {teams && teams.length > 0 && (
@@ -180,6 +257,57 @@ export default function KalenderPage() {
         <EmptyState title="Kalender segera hadir" hint="Fitur kalender sedang disiapkan tim backend." />
       ) : events === null && !error ? (
         <Spinner />
+      ) : view === "day" ? (
+        <DayAgenda
+          date={selected ?? toISODate(new Date())}
+          events={byDay.get(selected ?? toISODate(new Date())) ?? []}
+          onPickDate={setSelected}
+        />
+      ) : view === "week" ? (
+        <>
+          <Card className="!p-2 sm:!p-3">
+            <div className="grid grid-cols-7 gap-1">
+              {weekCells.map((iso) => {
+                const d = parseISODate(iso);
+                const evs = byDay.get(iso) ?? [];
+                const isSel = selected === iso;
+                const isToday = iso === toISODate(new Date());
+                return (
+                  <button
+                    key={iso}
+                    onClick={() => { setSelected(iso); setView("day"); }}
+                    className={`flex min-h-24 flex-col rounded-lg p-1.5 text-left text-xs transition ${
+                      isSel ? "bg-emerald-100 ring-2 ring-emerald-500" : "bg-slate-50 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase ${isToday ? "text-emerald-700" : "text-slate-400"}`}>
+                      {DAY_NAMES[(d.getDay() + 6) % 7]}
+                    </span>
+                    <span className={`text-base font-bold ${isToday ? "text-emerald-700" : "text-slate-800"}`}>
+                      {d.getDate()}
+                    </span>
+                    <span className="mt-1 space-y-0.5 overflow-hidden">
+                      {evs.slice(0, 3).map((e, i) => (
+                        <span key={`${e.id}-${i}`} className={`block truncate rounded px-1 py-0.5 text-[10px] font-semibold ${KIND_META[e.kind]?.chip ?? "bg-slate-100"}`}>
+                          {e.title}
+                        </span>
+                      ))}
+                      {evs.length > 3 && <span className="text-[10px] text-slate-400">+{evs.length - 3} lagi</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+          <div className="flex flex-wrap gap-3 px-1 text-xs text-slate-600">
+            {(Object.keys(KIND_META) as CalEvent["kind"][]).map((k) => (
+              <span key={k} className="flex items-center gap-1.5">
+                <span className={`h-2.5 w-2.5 rounded-full ${KIND_META[k].dot}`} />
+                {KIND_META[k].label}
+              </span>
+            ))}
+          </div>
+        </>
       ) : (
         <>
           {/* Grid bulan */}

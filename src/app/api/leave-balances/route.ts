@@ -18,6 +18,7 @@ function assertBalanceAccess(user: SessionUser, target: {
   teamId: number;
   sectionId: number;
   departmentId: number;
+  divisionId: number;
 }): void {
   if (hasRole(user, "ADMIN")) return;
   if (user.employeeId != null && user.employeeId === target.id) return;
@@ -28,6 +29,7 @@ function assertBalanceAccess(user: SessionUser, target: {
   if (hasRole(user, "FOREMAN", "WAFOR") && emp.teamId === target.teamId) return;
   if (hasRole(user, "KOORDINATOR") && emp.sectionId === target.sectionId) return;
   if (hasRole(user, "SPV") && emp.departmentId === target.departmentId) return;
+  if (hasRole(user, "WSPV") && emp.divisionId === target.divisionId) return;
   throw new ApiError("FORBIDDEN", "Anda tidak memiliki akses ke saldo karyawan ini.", 403);
 }
 
@@ -54,7 +56,7 @@ export async function GET(req: Request) {
 
     const target = await db.employee.findUnique({
       where: { id: employeeId },
-      select: { id: true, name: true, nik: true, teamId: true, sectionId: true, departmentId: true },
+      select: { id: true, name: true, nik: true, teamId: true, sectionId: true, departmentId: true, divisionId: true },
     });
     if (!target) throw new ApiError("NOT_FOUND", "Karyawan tidak ditemukan.", 404);
     assertBalanceAccess(user, target);

@@ -18,7 +18,7 @@ import { toXlsxBuffer, toCsvString, toPdfBuffer, downloadResponse } from "@/lib/
 export async function GET(req: Request, { params }: { params: Promise<{ type: string }> }) {
   try {
     const user = await requireUser();
-    requireRole(user, "ADMIN", "SPV");
+    requireRole(user, "ADMIN", "SPV", "WSPV");
     const { type } = await params;
     const sp = new URL(req.url).searchParams;
     const format = (sp.get("format") ?? "json").toLowerCase();

@@ -35,7 +35,10 @@ export interface ValidationIssue {
 
 export interface ValidationSettings {
   CFV_DAYS: number;
-  CFV_ELIGIBILITY_MONTHS: number;
+  CFV_ELIGIBILITY_MONTHS: number; // legacy: dipakai bila setting per-role belum ada
+  CFV_ELIGIBILITY_CREW_MONTHS: number;
+  CFV_ELIGIBILITY_FOREMAN_MONTHS: number;
+  CFV_ELIGIBILITY_SPV_MONTHS: number;
   CT_ANNUAL_DAYS: number;
   CT_MAX_SINGLE: number;
   CT_MAX_WITH_CFV: number;
@@ -66,6 +69,7 @@ export interface ValidationInput {
     teamId: number;
     sectionId: number;
     status: EmployeeStatus;
+    positionCode: string; // kode jabatan: CREW, FOREMAN, WAFOR, KOORDINATOR, SPV, WAKIL_SPV
     positionIsOperational: boolean; // Wafor/Foreman/Koordinator
   };
   leaveType: {
@@ -150,6 +154,19 @@ function gapDays(prevEnd: Date, nextStart: Date): number {
   return Math.round((nextStart.getTime() - prevEnd.getTime()) / 86_400_000) - 1;
 }
 
+/**
+ * Masa kerja minimum agar CFV aktif, dibedakan per jabatan (PRD §1A.8):
+ * Crew 5 bulan, Foreman/Wafor 4 bulan, SPV/WSPV/Koordinator 3 bulan.
+ */
+export function cfvEligibilityMonths(positionCode: string, settings: ValidationSettings): number {
+  const code = (positionCode ?? "").toUpperCase();
+  if (code === "FOREMAN" || code === "WAFOR") return settings.CFV_ELIGIBILITY_FOREMAN_MONTHS;
+  if (code === "SPV" || code === "WAKIL_SPV" || code === "WSPV" || code === "KOORDINATOR") {
+    return settings.CFV_ELIGIBILITY_SPV_MONTHS;
+  }
+  return settings.CFV_ELIGIBILITY_CREW_MONTHS;
+}
+
 export function validateLeaveRequest(input: ValidationInput): ValidationResult {
   const issues: ValidationIssue[] = [];
   const err = (code: string, message: string) => issues.push({ code, message, severity: "ERROR" });
@@ -177,9 +194,10 @@ export function validateLeaveRequest(input: ValidationInput): ValidationResult {
   }
 
   // --- 2. Eligibility (masa kerja) ---
+  // PRD §1A.8: CFV dibedakan per jabatan (Crew 5 bln, Foreman/Wafor 4 bln, SPV/WSPV/Koordinator 3 bln).
   const eligMonths =
     leaveType.category === "CFV"
-      ? settings.CFV_ELIGIBILITY_MONTHS
+      ? cfvEligibilityMonths(input.employee.positionCode, settings)
       : leaveType.category === "CT"
         ? 12
         : (leaveType.eligibilityMonths ?? 0);
@@ -354,11 +372,14 @@ export async function loadValidationSettings(): Promise<ValidationSettings> {
   return {
     CFV_DAYS: await n("CFV_DAYS", 12),
     CFV_ELIGIBILITY_MONTHS: await n("CFV_ELIGIBILITY_MONTHS", 5),
+    CFV_ELIGIBILITY_CREW_MONTHS: await n("CFV_ELIGIBILITY_CREW_MONTHS", 5),
+    CFV_ELIGIBILITY_FOREMAN_MONTHS: await n("CFV_ELIGIBILITY_FOREMAN_MONTHS", 4),
+    CFV_ELIGIBILITY_SPV_MONTHS: await n("CFV_ELIGIBILITY_SPV_MONTHS", 3),
     CT_ANNUAL_DAYS: await n("CT_ANNUAL_DAYS", 12),
     CT_MAX_SINGLE: await n("CT_MAX_SINGLE", 6),
     CT_MAX_WITH_CFV: await n("CT_MAX_WITH_CFV", 4),
     CT_MIN_GAP_DAYS: await n("CT_MIN_GAP_DAYS", 7),
-    POST_CFV_CT_GAP_DAYS: await n("POST_CFV_CT_GAP_DAYS", 30),
+    POST_CFV_CT_GAP_DAYS: await n("POST_CFV_CT_GAP_DAYS", 7),
     MIN_NOTICE_DAYS: await n("MIN_NOTICE_DAYS", 10),
     TEAM_LEAVE_MAX_PER_DAY: await n("TEAM_LEAVE_MAX_PER_DAY", 2),
     TEAM_LEAVE_CONFLICT_SEVERITY: await sev("TEAM_LEAVE_CONFLICT_SEVERITY"),
@@ -483,6 +504,7 @@ export async function buildValidationInput(args: BuildInputArgs): Promise<Valida
       teamId: employee.teamId,
       sectionId: employee.sectionId,
       status: employee.status,
+      positionCode: employee.position.code,
       positionIsOperational: employee.position.isOperationalGroup,
     },
     leaveType: {

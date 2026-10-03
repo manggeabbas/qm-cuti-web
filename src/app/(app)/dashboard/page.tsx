@@ -23,7 +23,7 @@ import {
   type MeUser,
 } from "@/components/leave-helpers";
 
-const APPROVER_ROLES = ["FOREMAN", "WAFOR", "KOORDINATOR", "SPV"];
+const APPROVER_ROLES = ["FOREMAN", "WAFOR", "KOORDINATOR", "WSPV", "SPV"];
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (

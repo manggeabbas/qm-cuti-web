@@ -4,6 +4,7 @@ import { ok, fail, toErrorResponse } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { requireRole } from "@/lib/rbac";
 import { auditLog, getRequestMeta } from "@/lib/audit";
+import { assertPeriodEditable } from "@/lib/shift-periods";
 import { parseISODate, toISODate } from "@/lib/dates";
 
 /** GET /api/shifts/rosters?from=&to=&teamId= */
@@ -42,8 +43,14 @@ const setSchema = z.object({
 export async function POST(req: Request) {
   try {
     const user = await requireUser();
-    requireRole(user, "ADMIN", "SPV", "FOREMAN", "WAFOR");
+    requireRole(user, "ADMIN", "SPV", "WSPV", "FOREMAN", "WAFOR");
     const body = setSchema.parse(await req.json());
+    // tolak bila roster existing berada pada periode yang terkunci
+    const existing = await db.shiftRoster.findUnique({
+      where: { date_teamId: { date: parseISODate(body.date), teamId: body.teamId } },
+      select: { periodId: true },
+    });
+    await assertPeriodEditable(existing?.periodId ?? null);
     const row = await db.shiftRoster.upsert({
       where: { date_teamId: { date: parseISODate(body.date), teamId: body.teamId } },
       create: { date: parseISODate(body.date), teamId: body.teamId, shiftTypeId: body.shiftTypeId },

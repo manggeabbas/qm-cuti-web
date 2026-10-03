@@ -19,7 +19,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ attId: string 
       include: {
         request: {
           include: {
-            employee: { select: { teamId: true, sectionId: true, departmentId: true } },
+            employee: { select: { teamId: true, sectionId: true, departmentId: true, divisionId: true } },
           },
         },
       },

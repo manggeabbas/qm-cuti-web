@@ -13,12 +13,15 @@ const db = new PrismaClient({
 
 const SETTINGS: [string, string, string][] = [
   ["CFV_DAYS", "12", "Hak CFV (hari)"],
-  ["CFV_ELIGIBILITY_MONTHS", "5", "Masa kerja agar CFV aktif (bulan)"],
+  ["CFV_ELIGIBILITY_MONTHS", "5", "Masa kerja agar CFV aktif, crew (bulan) [legacy, digantikan per-role]"],
+  ["CFV_ELIGIBILITY_CREW_MONTHS", "5", "Masa kerja agar CFV aktif untuk Crew (bulan)"],
+  ["CFV_ELIGIBILITY_FOREMAN_MONTHS", "4", "Masa kerja agar CFV aktif untuk Foreman/Wafor (bulan)"],
+  ["CFV_ELIGIBILITY_SPV_MONTHS", "3", "Masa kerja agar CFV aktif untuk SPV/WSPV/Koordinator (bulan)"],
   ["CT_ANNUAL_DAYS", "12", "Hak CT per tahun (hari)"],
   ["CT_MAX_SINGLE", "6", "Maks CT tunggal (hari)"],
   ["CT_MAX_WITH_CFV", "4", "Maks CT gabung CFV (hari)"],
   ["CT_MIN_GAP_DAYS", "7", "Jarak minimal antar pengajuan CT (hari)"],
-  ["POST_CFV_CT_GAP_DAYS", "30", "Jarak CT setelah paket CFV(12)+CT(4) (hari)"],
+  ["POST_CFV_CT_GAP_DAYS", "7", "Jarak CT setelah paket CFV(12)+CT(4) (hari)"],
   ["MIN_NOTICE_DAYS", "10", "Minimum notice pengajuan (hari)"],
   ["TEAM_OFF_LIMIT_SMALL", "1", "Maks OFF/hari bila regu < 7 orang"],
   ["TEAM_OFF_LIMIT_LARGE", "2", "Maks OFF/hari bila regu >= 7 orang"],
@@ -27,6 +30,7 @@ const SETTINGS: [string, string, string][] = [
   ["TEAM_LEAVE_CONFLICT_SEVERITY", "WARN", "WARN atau ERROR untuk konflik regu"],
   ["JABATAN_CONFLICT_SEVERITY", "WARN", "WARN atau ERROR untuk konflik jabatan"],
   ["COUNT_WEEKEND_AS_LEAVE", "true", "Hitung Sabtu/Minggu sebagai hari cuti"],
+  ["SHIFT_AUTO_LOCK_LEAD_DAYS", "0", "Auto-lock periode PUBLISHED sekian hari sebelum berjalan (0 = mati)"],
 ];
 
 const PERMISSIONS: [string, string][] = [
@@ -66,7 +70,7 @@ async function main(): Promise<void> {
   }
   const permRows = await db.permission.findMany();
   const permId = new Map(permRows.map((p) => [p.code, p.id]));
-  for (const roleName of ["ADMIN", "SPV", "FOREMAN", "WAFOR", "KOORDINATOR", "EMPLOYEE"] as const) {
+  for (const roleName of ["ADMIN", "SPV", "WSPV", "FOREMAN", "WAFOR", "KOORDINATOR", "EMPLOYEE"] as const) {
     const role = await db.role.upsert({
       where: { name: roleName },
       create: { name: roleName, description: roleName },
@@ -205,7 +209,7 @@ async function main(): Promise<void> {
 
   // ---- Akun demo ----
   const mkUser = async (
-    username: string, password: string, role: "ADMIN" | "SPV" | "FOREMAN" | "WAFOR" | "KOORDINATOR" | "EMPLOYEE",
+    username: string, password: string, role: "ADMIN" | "SPV" | "WSPV" | "FOREMAN" | "WAFOR" | "KOORDINATOR" | "EMPLOYEE",
     emp?: { nik: string; name: string; position: string; team: string; effectiveDate: string; supervisorNik?: string },
   ): Promise<void> => {
     const roleRow = await db.role.findUniqueOrThrow({ where: { name: role } });
@@ -242,13 +246,14 @@ async function main(): Promise<void> {
   };
 
   await mkUser("admin", process.env.ADMIN_PASSWORD || "admin123", "ADMIN");
-  await mkUser("spv1", "cuti123", "SPV", { nik: "900001", name: "Supervisor Satu", position: "SPV", team: "REGU_A", effectiveDate: "2020-01-15" });
-  await mkUser("foreman1", "cuti123", "FOREMAN", { nik: "900002", name: "Foreman Satu", position: "FOREMAN", team: "REGU_A", effectiveDate: "2021-03-01", supervisorNik: "900001" });
-  await mkUser("wafor1", "cuti123", "WAFOR", { nik: "900003", name: "Wakil Foreman Satu", position: "WAFOR", team: "REGU_A", effectiveDate: "2021-06-01", supervisorNik: "900002" });
-  await mkUser("koord1", "cuti123", "KOORDINATOR", { nik: "900004", name: "Koordinator Satu", position: "KOORDINATOR", team: "REGU_A", effectiveDate: "2022-01-10", supervisorNik: "900002" });
-  await mkUser("crew1", "cuti123", "EMPLOYEE", { nik: "900005", name: "Crew Satu", position: "CREW", team: "REGU_A", effectiveDate: "2023-02-01", supervisorNik: "900002" });
-  await mkUser("crew2", "cuti123", "EMPLOYEE", { nik: "900006", name: "Crew Dua", position: "CREW", team: "REGU_A", effectiveDate: "2024-08-01", supervisorNik: "900002" });
-  await mkUser("crew3", "cuti123", "EMPLOYEE", { nik: "900007", name: "Crew Tiga", position: "CREW", team: "REGU_B", effectiveDate: "2025-06-01", supervisorNik: "900002" });
+  await mkUser("spv1", "cuti123", "SPV", { nik: "90000001", name: "Supervisor Satu", position: "SPV", team: "REGU_A", effectiveDate: "2020-01-15" });
+  await mkUser("wspv1", "cuti123", "WSPV", { nik: "90000008", name: "Wakil Supervisor Satu", position: "WAKIL_SPV", team: "REGU_A", effectiveDate: "2020-06-01", supervisorNik: "90000001" });
+  await mkUser("foreman1", "cuti123", "FOREMAN", { nik: "90000002", name: "Foreman Satu", position: "FOREMAN", team: "REGU_A", effectiveDate: "2021-03-01", supervisorNik: "90000001" });
+  await mkUser("wafor1", "cuti123", "WAFOR", { nik: "90000003", name: "Wakil Foreman Satu", position: "WAFOR", team: "REGU_A", effectiveDate: "2021-06-01", supervisorNik: "90000002" });
+  await mkUser("koord1", "cuti123", "KOORDINATOR", { nik: "90000004", name: "Koordinator Satu", position: "KOORDINATOR", team: "REGU_A", effectiveDate: "2022-01-10", supervisorNik: "90000002" });
+  await mkUser("crew1", "cuti123", "EMPLOYEE", { nik: "90000005", name: "Crew Satu", position: "CREW", team: "REGU_A", effectiveDate: "2023-02-01", supervisorNik: "90000002" });
+  await mkUser("crew2", "cuti123", "EMPLOYEE", { nik: "90000006", name: "Crew Dua", position: "CREW", team: "REGU_A", effectiveDate: "2024-08-01", supervisorNik: "90000002" });
+  await mkUser("crew3", "cuti123", "EMPLOYEE", { nik: "90000007", name: "Crew Tiga", position: "CREW", team: "REGU_B", effectiveDate: "2025-06-01", supervisorNik: "90000002" });
 
   console.log("Seed selesai: roles, settings, org, jabatan, jenis cuti, shift, workflow, akun demo.");
 }

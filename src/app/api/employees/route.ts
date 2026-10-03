@@ -44,6 +44,7 @@ export function mapEmployee(e: EmployeeRow) {
     email: e.email,
     phone: e.phone,
     status: e.status,
+    offLocked: e.offLocked,
   };
 }
 
@@ -51,7 +52,7 @@ export function mapEmployee(e: EmployeeRow) {
 export async function GET(req: Request) {
   try {
     const user = await requireUser();
-    requireRole(user, "SPV", "FOREMAN", "WAFOR", "KOORDINATOR");
+    requireRole(user, "SPV", "WSPV", "FOREMAN", "WAFOR", "KOORDINATOR");
     const sp = new URL(req.url).searchParams;
     const { page, limit, skip } = getPagination(sp);
 
@@ -106,7 +107,10 @@ export async function GET(req: Request) {
 }
 
 export const createEmployeeSchema = z.object({
-  nik: z.string().trim().min(1, "NIK wajib diisi."),
+  nik: z
+    .string()
+    .trim()
+    .regex(/^\d{8}$/, "NIK harus tepat 8 digit angka."),
   name: z.string().trim().min(1, "Nama wajib diisi."),
   effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal YYYY-MM-DD."),
   positionId: z.number().int(),

@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/rbac";
 import { auditLog, getRequestMeta } from "@/lib/audit";
 import { parseISODate } from "@/lib/dates";
 import { mapEmployee, createEmployeeSchema } from "../route";
+import { recordEmployeeHistory } from "@/lib/employee-history";
 
 const updateEmployeeSchema = createEmployeeSchema.partial();
 
@@ -16,7 +17,7 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function GET(req: Request, ctx: Ctx) {
   try {
     const user = await requireUser();
-    requireRole(user, "SPV", "FOREMAN", "WAFOR", "KOORDINATOR");
+    requireRole(user, "SPV", "WSPV", "FOREMAN", "WAFOR", "KOORDINATOR");
     const { id } = await ctx.params;
     const row = await db.employee.findUnique({
       where: { id: Number(id) },
@@ -131,6 +132,14 @@ export async function PUT(req: Request, ctx: Ctx) {
       newValue: mapEmployee(updated),
       ...getRequestMeta(req),
     });
+
+    // histori berversion (PRD §1A.14) — tidak pernah menggagalkan update utama
+    try {
+      await recordEmployeeHistory(empId, existing as unknown as Record<string, unknown>, body as unknown as Record<string, unknown>, user.id, effectiveDate ?? null);
+    } catch (e) {
+      console.error("[employees] gagal mencatat histori:", e);
+    }
+
     return ok(mapEmployee(updated));
   } catch (e) {
     if (e instanceof z.ZodError) {
@@ -176,6 +185,11 @@ export async function DELETE(req: Request, ctx: Ctx) {
       newValue: { status: "INACTIVE" },
       ...getRequestMeta(req),
     });
+    try {
+      await recordEmployeeHistory(empId, { status: existing.status }, { status: "INACTIVE" }, user.id);
+    } catch (e) {
+      console.error("[employees] gagal mencatat histori:", e);
+    }
     return ok(mapEmployee(updated));
   } catch (e) {
     return toErrorResponse(e);

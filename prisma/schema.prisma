@@ -16,6 +16,7 @@ datasource db {
 enum RoleName {
   ADMIN
   SPV
+  WSPV
   FOREMAN
   WAFOR
   KOORDINATOR
@@ -59,7 +60,25 @@ enum WorkflowStepRole {
   KOORDINATOR
   WAFOR
   FOREMAN
+  WSPV
   SPV
+}
+
+enum ShiftScheduleStatus {
+  DRAFT
+  PUBLISHED
+  LOCKED
+}
+
+enum OffChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OffChangeAction {
+  ADD
+  REMOVE
 }
 
 enum TxnKind {
@@ -111,13 +130,13 @@ enum NotificationEvent {
 // ---------------- Auth & RBAC ----------------
 
 model Role {
-  id          Int       @id @default(autoincrement())
-  name        RoleName  @unique
+  id          Int              @id @default(autoincrement())
+  name        RoleName         @unique
   description String?
   users       UserRole[]
   permissions RolePermission[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model Permission {
@@ -130,26 +149,26 @@ model Permission {
 model RolePermission {
   roleId       Int
   permissionId Int
-  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
 }
 
 model User {
-  id           Int         @id @default(autoincrement())
-  username     String      @unique // biasanya NIK
+  id           Int                    @id @default(autoincrement())
+  username     String                 @unique // biasanya NIK
   passwordHash String
-  employeeId   Int?        @unique
-  employee     Employee?   @relation(fields: [employeeId], references: [id])
-  isActive     Boolean     @default(true)
+  employeeId   Int?                   @unique
+  employee     Employee?              @relation(fields: [employeeId], references: [id])
+  isActive     Boolean                @default(true)
   lastLoginAt  DateTime?
   roles        UserRole[]
   sessions     UserSession[]
   auditLogs    AuditLog[]
   approvals    LeaveRequestApproval[] @relation("ApproverUser")
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
 }
 
 model UserRole {
@@ -162,14 +181,14 @@ model UserRole {
 }
 
 model UserSession {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
@@ -188,16 +207,16 @@ model Division {
 }
 
 model Department {
-  id         Int       @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   divisionId Int
-  division   Division  @relation(fields: [divisionId], references: [id])
-  code       String    @unique
+  division   Division   @relation(fields: [divisionId], references: [id])
+  code       String     @unique
   name       String
   sections   Section[]
   employees  Employee[]
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model Section {
@@ -214,124 +233,148 @@ model Section {
 }
 
 model Team {
-  id         Int       @id @default(autoincrement())
-  sectionId  Int
-  section    Section   @relation(fields: [sectionId], references: [id])
-  code       String    @unique // REGU_A, REGU_B, REGU_C, LABORATORIUM
-  name       String
-  employees  Employee[]
-  rosters    ShiftRoster[]
-  workflows  ApprovalWorkflow[]
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id            Int                         @id @default(autoincrement())
+  sectionId     Int
+  section       Section                     @relation(fields: [sectionId], references: [id])
+  code          String                      @unique // REGU_A, REGU_B, REGU_C, LABORATORIUM
+  name          String
+  employees     Employee[]
+  rosters       ShiftRoster[]
+  templateItems ShiftRotationTemplateItem[]
+  workflows     ApprovalWorkflow[]
+  isActive      Boolean                     @default(true)
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
 }
 
 model Position {
-  id                  Int        @id @default(autoincrement())
-  code                String     @unique // SPV, WAKIL_SPV, FOREMAN, WAFOR, KOORDINATOR, CREW
-  name                String
-  levelOrder          Int        @default(0)
-  isOperationalGroup  Boolean    @default(false) // Wafor/Foreman/Koordinator = satu kelompok konflik
-  employees           Employee[]
-  isActive            Boolean    @default(true)
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  id                 Int        @id @default(autoincrement())
+  code               String     @unique // SPV, WAKIL_SPV, FOREMAN, WAFOR, KOORDINATOR, CREW
+  name               String
+  levelOrder         Int        @default(0)
+  isOperationalGroup Boolean    @default(false) // Wafor/Foreman/Koordinator = satu kelompok konflik
+  employees          Employee[]
+  isActive           Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 }
 
 // ---------------- Karyawan ----------------
 
 model Employee {
-  id             Int            @id @default(autoincrement())
-  nik            String         @unique
-  name           String
-  effectiveDate  DateTime       @db.Date // tanggal efektif bekerja
-  positionId     Int
-  position       Position       @relation(fields: [positionId], references: [id])
-  level          String?
-  divisionId     Int
-  division       Division       @relation(fields: [divisionId], references: [id])
-  departmentId   Int
-  department     Department     @relation(fields: [departmentId], references: [id])
-  sectionId      Int
-  section        Section        @relation(fields: [sectionId], references: [id])
-  teamId         Int
-  team           Team           @relation(fields: [teamId], references: [id])
-  supervisorId   Int? // atasan langsung
-  supervisor     Employee?      @relation("Supervisor", fields: [supervisorId], references: [id])
-  subordinates   Employee[]     @relation("Supervisor")
-  email          String?
-  phone          String?
-  status         EmployeeStatus @default(ACTIVE)
-  user           User?
-  leaveRequests  LeaveRequest[]
-  balanceTxns    LeaveBalanceTransaction[]
-  balances       LeaveBalance[]
-  offSchedules   OffSchedule[]
-  telegramUser   TelegramUser?
-  wechatUser     WechatUser?
-  notifications  Notification[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                Int                       @id @default(autoincrement())
+  nik               String                    @unique
+  name              String
+  effectiveDate     DateTime                  @db.Date // tanggal efektif bekerja
+  positionId        Int
+  position          Position                  @relation(fields: [positionId], references: [id])
+  level             String?
+  divisionId        Int
+  division          Division                  @relation(fields: [divisionId], references: [id])
+  departmentId      Int
+  department        Department                @relation(fields: [departmentId], references: [id])
+  sectionId         Int
+  section           Section                   @relation(fields: [sectionId], references: [id])
+  teamId            Int
+  team              Team                      @relation(fields: [teamId], references: [id])
+  supervisorId      Int? // atasan langsung
+  supervisor        Employee?                 @relation("Supervisor", fields: [supervisorId], references: [id])
+  subordinates      Employee[]                @relation("Supervisor")
+  email             String?
+  phone             String?
+  status            EmployeeStatus            @default(ACTIVE)
+  offLocked         Boolean                   @default(false) // OFF dikunci -> perubahan via approval
+  user              User?
+  leaveRequests     LeaveRequest[]
+  balanceTxns       LeaveBalanceTransaction[]
+  balances          LeaveBalance[]
+  offSchedules      OffSchedule[]
+  offChangeRequests OffChangeRequest[]
+  history           EmployeeHistory[]
+  telegramUser      TelegramUser?
+  wechatUser        WechatUser?
+  notifications     Notification[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
 
   @@index([teamId])
   @@index([status])
   @@index([supervisorId])
 }
 
+/**
+ * Histori perubahan data karyawan berversion (PRD §1A.14).
+ */
+model EmployeeHistory {
+  id            Int       @id @default(autoincrement())
+  employeeId    Int
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  field         String // nama field yang berubah, mis. teamId
+  fieldLabel    String // label ramah, mis. "Regu"
+  oldValue      String?
+  oldLabel      String? // representasi ramah nilai lama
+  newValue      String?
+  newLabel      String? // representasi ramah nilai baru
+  effectiveDate DateTime? @db.Date
+  changedBy     Int? // userId actor
+  createdAt     DateTime  @default(now())
+
+  @@index([employeeId, createdAt])
+}
+
 // ---------------- Jenis Cuti ----------------
 
 model LeaveType {
-  id                   Int              @id @default(autoincrement())
-  code                 String           @unique // CFV, CT, CUTI_MENIKAH, IZIN_PRIBADI, ...
-  name                 String
-  category             LeaveCategory
-  defaultDays          Int? // hak default per periode (CFV=12, CT=12)
-  eligibilityMonths    Int? // CFV=5, CT=12
-  maxSingleDays        Int? // CT tunggal = 6
-  maxCombinedWithCfv   Int? // CT gabung CFV = 4
-  requiresAttachment   Boolean          @default(false)
-  consumesBalance      Boolean          @default(true) // izin umumnya tidak memotong saldo
-  countsAsLeaveDay     Boolean          @default(true)
-  isActive             Boolean          @default(true)
-  sortOrder            Int              @default(0)
-  requests             LeaveRequest[]
-  balanceTxns          LeaveBalanceTransaction[]
-  balances             LeaveBalance[]
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  id                 Int                       @id @default(autoincrement())
+  code               String                    @unique // CFV, CT, CUTI_MENIKAH, IZIN_PRIBADI, ...
+  name               String
+  category           LeaveCategory
+  defaultDays        Int? // hak default per periode (CFV=12, CT=12)
+  eligibilityMonths  Int? // CFV=5, CT=12
+  maxSingleDays      Int? // CT tunggal = 6
+  maxCombinedWithCfv Int? // CT gabung CFV = 4
+  requiresAttachment Boolean                   @default(false)
+  consumesBalance    Boolean                   @default(true) // izin umumnya tidak memotong saldo
+  countsAsLeaveDay   Boolean                   @default(true)
+  isActive           Boolean                   @default(true)
+  sortOrder          Int                       @default(0)
+  requests           LeaveRequest[]
+  balanceTxns        LeaveBalanceTransaction[]
+  balances           LeaveBalance[]
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 }
 
 // ---------------- Saldo (ledger) ----------------
 
 model LeaveBalanceTransaction {
-  id           Int        @id @default(autoincrement())
-  employeeId   Int
-  employee     Employee   @relation(fields: [employeeId], references: [id])
-  leaveTypeId  Int
-  leaveType    LeaveType  @relation(fields: [leaveTypeId], references: [id])
-  periodYear   Int // tahun periode hak
-  kind         TxnKind
-  days         Decimal    @db.Decimal(6, 2) // positif = penambahan, negatif = pemakaian
-  requestId    Int?
-  request      LeaveRequest? @relation(fields: [requestId], references: [id])
-  note         String?
-  createdById  Int?
-  createdAt    DateTime   @default(now())
+  id          Int           @id @default(autoincrement())
+  employeeId  Int
+  employee    Employee      @relation(fields: [employeeId], references: [id])
+  leaveTypeId Int
+  leaveType   LeaveType     @relation(fields: [leaveTypeId], references: [id])
+  periodYear  Int // tahun periode hak
+  kind        TxnKind
+  days        Decimal       @db.Decimal(6, 2) // positif = penambahan, negatif = pemakaian
+  requestId   Int?
+  request     LeaveRequest? @relation(fields: [requestId], references: [id])
+  note        String?
+  createdById Int?
+  createdAt   DateTime      @default(now())
 
   @@index([employeeId, leaveTypeId, periodYear])
   @@index([requestId])
 }
 
 model LeaveBalance {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   employeeId  Int
   employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   leaveTypeId Int
   leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
   periodYear  Int
-  allocated   Decimal   @db.Decimal(8, 2) @default(0) // total hak
-  used        Decimal   @db.Decimal(8, 2) @default(0) // terpakai (approved)
+  allocated   Decimal   @default(0) @db.Decimal(8, 2) // total hak
+  used        Decimal   @default(0) @db.Decimal(8, 2) // terpakai (approved)
   updatedAt   DateTime  @updatedAt
 
   @@unique([employeeId, leaveTypeId, periodYear])
@@ -340,23 +383,23 @@ model LeaveBalance {
 // ---------------- Pengajuan ----------------
 
 model LeaveRequest {
-  id                 Int           @id @default(autoincrement())
+  id                 Int                       @id @default(autoincrement())
   employeeId         Int
-  employee           Employee      @relation(fields: [employeeId], references: [id])
+  employee           Employee                  @relation(fields: [employeeId], references: [id])
   leaveTypeId        Int
-  leaveType          LeaveType     @relation(fields: [leaveTypeId], references: [id])
+  leaveType          LeaveType                 @relation(fields: [leaveTypeId], references: [id])
   packageId          String? // pengelompokan paket CFV+CT
   packageOrder       Int? // 1 = CFV, 2 = CT
-  startDate          DateTime      @db.Date
-  endDate            DateTime      @db.Date
-  totalDays          Decimal       @db.Decimal(6, 2) // dihitung sistem, terkunci
+  startDate          DateTime                  @db.Date
+  endDate            DateTime                  @db.Date
+  totalDays          Decimal                   @db.Decimal(6, 2) // dihitung sistem, terkunci
   reason             String
   addressDuringLeave String?
   contactNumber      String?
   notes              String?
-  status             RequestStatus @default(DRAFT)
+  status             RequestStatus             @default(DRAFT)
   workflowId         Int?
-  workflow           ApprovalWorkflow? @relation(fields: [workflowId], references: [id])
+  workflow           ApprovalWorkflow?         @relation(fields: [workflowId], references: [id])
   currentStepOrder   Int? // langkah approval aktif
   submittedAt        DateTime?
   decidedAt          DateTime?
@@ -365,8 +408,8 @@ model LeaveRequest {
   attachments        LeaveAttachment[]
   conflicts          LeaveRequestConflict[]
   balanceTxns        LeaveBalanceTransaction[]
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 
   @@index([employeeId, status])
   @@index([status])
@@ -375,16 +418,16 @@ model LeaveRequest {
 }
 
 model LeaveRequestApproval {
-  id             Int             @id @default(autoincrement())
-  requestId      Int
-  request        LeaveRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  stepOrder      Int
-  stepRole       WorkflowStepRole
-  approverId     Int? // user yang bertindak
-  approver       User?           @relation("ApproverUser", fields: [approverId], references: [id])
-  action         ApprovalAction
-  comment        String?
-  createdAt      DateTime        @default(now())
+  id         Int              @id @default(autoincrement())
+  requestId  Int
+  request    LeaveRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  stepOrder  Int
+  stepRole   WorkflowStepRole
+  approverId Int? // user yang bertindak
+  approver   User?            @relation("ApproverUser", fields: [approverId], references: [id])
+  action     ApprovalAction
+  comment    String?
+  createdAt  DateTime         @default(now())
 
   @@index([requestId])
 }
@@ -415,16 +458,16 @@ model LeaveRequestConflict {
 // ---------------- Workflow Approval ----------------
 
 model ApprovalWorkflow {
-  id        Int                   @id @default(autoincrement())
+  id        Int                    @id @default(autoincrement())
   name      String
   teamId    Int? // null = default global
-  team      Team?                 @relation(fields: [teamId], references: [id])
-  isDefault Boolean               @default(false)
-  isActive  Boolean               @default(true)
+  team      Team?                  @relation(fields: [teamId], references: [id])
+  isDefault Boolean                @default(false)
+  isActive  Boolean                @default(true)
   steps     ApprovalWorkflowStep[]
   requests  LeaveRequest[]
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
 }
 
 model ApprovalWorkflowStep {
@@ -440,23 +483,24 @@ model ApprovalWorkflowStep {
 // ---------------- Hari Libur ----------------
 
 model Holiday {
-  id                Int      @id @default(autoincrement())
-  date              DateTime @unique @db.Date
-  name              String
-  countsAsLeaveDay  Boolean  @default(false) // apakah dihitung sebagai hari cuti
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  date             DateTime @unique @db.Date
+  name             String
+  countsAsLeaveDay Boolean  @default(false) // apakah dihitung sebagai hari cuti
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 // ---------------- Shift ----------------
 
 model ShiftType {
-  id        Int            @id @default(autoincrement())
-  code      String         @unique // PAGI, SORE, MALAM
-  name      String
-  patterns  ShiftPattern[]
-  rosters   ShiftRoster[]
-  isActive  Boolean        @default(true)
+  id            Int                         @id @default(autoincrement())
+  code          String                      @unique // PAGI, SORE, MALAM
+  name          String
+  patterns      ShiftPattern[]
+  rosters       ShiftRoster[]
+  templateItems ShiftRotationTemplateItem[]
+  isActive      Boolean                     @default(true)
 }
 
 model ShiftPattern {
@@ -472,17 +516,68 @@ model ShiftPattern {
 }
 
 model ShiftRoster {
-  id          Int       @id @default(autoincrement())
-  date        DateTime  @db.Date
+  id          Int                  @id @default(autoincrement())
+  date        DateTime             @db.Date
   teamId      Int
-  team        Team      @relation(fields: [teamId], references: [id])
+  team        Team                 @relation(fields: [teamId], references: [id])
   shiftTypeId Int
-  shiftType   ShiftType @relation(fields: [shiftTypeId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  shiftType   ShiftType            @relation(fields: [shiftTypeId], references: [id])
+  periodId    Int?
+  period      ShiftSchedulePeriod? @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
   @@unique([date, teamId])
   @@index([date])
+  @@index([periodId])
+}
+
+// ---------------- Template Rotasi & Periode Jadwal (PRD §20A) ----------------
+
+model ShiftRotationTemplate {
+  id          Int                         @id @default(autoincrement())
+  name        String
+  description String?
+  isActive    Boolean                     @default(true)
+  version     Int                         @default(1) // naik tiap ada perubahan setelah dipakai
+  items       ShiftRotationTemplateItem[]
+  periods     ShiftSchedulePeriod[]
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+}
+
+model ShiftRotationTemplateItem {
+  id          Int                   @id @default(autoincrement())
+  templateId  Int
+  template    ShiftRotationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  periodOrder Int // urutan periode dalam siklus (1, 2, 3, ...)
+  teamId      Int
+  team        Team                  @relation(fields: [teamId], references: [id])
+  shiftTypeId Int
+  shiftType   ShiftType             @relation(fields: [shiftTypeId], references: [id])
+
+  @@unique([templateId, periodOrder, teamId])
+  @@index([templateId])
+}
+
+model ShiftSchedulePeriod {
+  id              Int                    @id @default(autoincrement())
+  name            String
+  from            DateTime               @db.Date
+  to              DateTime               @db.Date
+  templateId      Int?
+  template        ShiftRotationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateVersion Int?
+  status          ShiftScheduleStatus    @default(DRAFT)
+  lockedAt        DateTime?
+  lockedBy        Int?
+  createdBy       Int?
+  rosters         ShiftRoster[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@index([from, to])
+  @@index([status])
 }
 
 // ---------------- OFF ----------------
@@ -498,6 +593,28 @@ model OffSchedule {
 
   @@unique([employeeId, date])
   @@index([date])
+}
+
+/**
+ * Pengajuan perubahan OFF saat OFF karyawan berstatus dikunci (PRD §22.2).
+ */
+model OffChangeRequest {
+  id          Int             @id @default(autoincrement())
+  employeeId  Int
+  employee    Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  action      OffChangeAction @default(ADD)
+  date        DateTime        @db.Date
+  note        String?
+  status      OffChangeStatus @default(PENDING)
+  requestedBy Int // userId pemohon
+  reviewedBy  Int? // userId approver
+  reviewNote  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([employeeId, status])
+  @@index([status])
 }
 
 // ---------------- Notifikasi ----------------
@@ -524,32 +641,32 @@ model WechatUser {
 }
 
 model Notification {
-  id          Int                 @id @default(autoincrement())
-  eventType   NotificationEvent
-  employeeId  Int? // penerima (karyawan)
-  employee    Employee?           @relation(fields: [employeeId], references: [id])
-  channel     NotificationChannel
-  title       String
-  message     String              @db.Text
-  actionUrl   String?
-  status      NotificationStatus  @default(PENDING)
-  attempts    Int                 @default(0)
-  sentAt      DateTime?
-  errorMessage String?            @db.Text
-  logs        NotificationLog[]
-  createdAt   DateTime            @default(now())
+  id           Int                 @id @default(autoincrement())
+  eventType    NotificationEvent
+  employeeId   Int? // penerima (karyawan)
+  employee     Employee?           @relation(fields: [employeeId], references: [id])
+  channel      NotificationChannel
+  title        String
+  message      String              @db.Text
+  actionUrl    String?
+  status       NotificationStatus  @default(PENDING)
+  attempts     Int                 @default(0)
+  sentAt       DateTime?
+  errorMessage String?             @db.Text
+  logs         NotificationLog[]
+  createdAt    DateTime            @default(now())
 
   @@index([status, createdAt])
   @@index([eventType])
 }
 
 model NotificationLog {
-  id             Int       @id @default(autoincrement())
+  id             Int                @id @default(autoincrement())
   notificationId Int
-  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  notification   Notification       @relation(fields: [notificationId], references: [id], onDelete: Cascade)
   status         NotificationStatus
-  detail         String?   @db.Text
-  createdAt      DateTime  @default(now())
+  detail         String?            @db.Text
+  createdAt      DateTime           @default(now())
 }
 
 // ---------------- Audit & Settings ----------------

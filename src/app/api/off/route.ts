@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     let employeeId = sp.get("employeeId") ? Number(sp.get("employeeId")) : undefined;
 
     // Employee biasa hanya boleh lihat milik sendiri
-    if (!hasRole(user, "ADMIN", "SPV", "FOREMAN", "WAFOR", "KOORDINATOR")) {
+    if (!hasRole(user, "ADMIN", "SPV", "WSPV", "FOREMAN", "WAFOR", "KOORDINATOR")) {
       employeeId = user.employeeId ?? undefined;
     }
     const where = {
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
       db.offSchedule.count({ where }),
       db.offSchedule.findMany({
         where,
-        include: { employee: { select: { id: true, name: true, nik: true, team: { select: { code: true, name: true } } } } },
+        include: { employee: { select: { id: true, name: true, nik: true, offLocked: true, team: { select: { code: true, name: true } } } } },
         orderBy: { date: "desc" },
         skip,
         take: limit,
@@ -56,12 +56,40 @@ export async function POST(req: Request) {
     const body = createSchema.parse(await req.json());
     let employeeId = body.employeeId;
 
-    if (!hasRole(user, "ADMIN", "FOREMAN", "WAFOR", "SPV")) {
+    if (!hasRole(user, "ADMIN", "FOREMAN", "WAFOR", "SPV", "WSPV")) {
       // karyawan hanya untuk diri sendiri
       if (!user.employeeId) throw new ApiError("FORBIDDEN", "Akun Anda tidak terhubung ke data karyawan.", 403);
       employeeId = user.employeeId;
     }
     if (!employeeId) throw new ApiError("VALIDATION_ERROR", "employeeId wajib diisi.", 422);
+
+    const isManager = hasRole(user, "ADMIN", "FOREMAN", "WAFOR", "SPV", "WSPV");
+    const isSelf = user.employeeId != null && user.employeeId === employeeId;
+
+    // Karyawan yang OFF-nya dikunci: pengajuan menjadi change request (PRD §22.2)
+    if (!isManager && isSelf) {
+      const emp = await db.employee.findUnique({ where: { id: employeeId }, select: { offLocked: true } });
+      if (emp?.offLocked) {
+        const date = parseISODate(body.date);
+        const issues = await validateOffRequest(employeeId, date);
+        const errors = issues.filter((i) => i.severity === "ERROR");
+        if (errors.length > 0) {
+          return fail("VALIDATION_FAILED", errors.map((e) => e.message).join(" "), 422);
+        }
+        const dup = await db.offChangeRequest.findFirst({
+          where: { employeeId, date, status: "PENDING" },
+        });
+        if (dup) return fail("DUPLICATE", "Sudah ada pengajuan perubahan OFF untuk tanggal ini.", 409);
+        const cr = await db.offChangeRequest.create({
+          data: { employeeId, action: "ADD", date, note: body.note, requestedBy: user.id },
+        });
+        await auditLog({
+          userId: user.id, action: "REQUEST_OFF_CHANGE", entityType: "OffChangeRequest", entityId: cr.id,
+          newValue: { employeeId, date: toISODate(date) }, ...getRequestMeta(req),
+        });
+        return ok({ changeRequest: cr, pendingApproval: true }, 201);
+      }
+    }
 
     const date = parseISODate(body.date);
     const issues = await validateOffRequest(employeeId, date);

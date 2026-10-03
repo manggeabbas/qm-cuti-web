@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const teamId = sp.get("teamId") ? Number(sp.get("teamId")) : null;
     const employeeId = sp.get("employeeId") ? Number(sp.get("employeeId")) : null;
 
-    const canSeeNames = hasRole(user, "ADMIN", "SPV", "FOREMAN", "WAFOR", "KOORDINATOR");
+    const canSeeNames = hasRole(user, "ADMIN", "SPV", "WSPV", "FOREMAN", "WAFOR", "KOORDINATOR");
 
     const leaves = await db.leaveRequest.findMany({
       where: {

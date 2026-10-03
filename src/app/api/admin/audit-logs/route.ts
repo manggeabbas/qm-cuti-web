@@ -8,7 +8,7 @@ import { requireRole } from "@/lib/rbac";
 export async function GET(req: Request) {
   try {
     const user = await requireUser();
-    requireRole(user, "ADMIN");
+    requireRole(user, "ADMIN", "SPV", "WSPV");
 
     const searchParams = new URL(req.url).searchParams;
     const { page, limit, skip } = getPagination(searchParams);

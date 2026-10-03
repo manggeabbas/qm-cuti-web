@@ -13,6 +13,7 @@ vi.mock("../settings", () => ({
 import {
   validateLeaveRequest,
   computeLeaveDays,
+  cfvEligibilityMonths,
   type ValidationInput,
   type ValidationSettings,
   type ActiveRequest,
@@ -24,6 +25,9 @@ const TODAY = D("2026-10-02");
 const SETTINGS: ValidationSettings = {
   CFV_DAYS: 12,
   CFV_ELIGIBILITY_MONTHS: 5,
+  CFV_ELIGIBILITY_CREW_MONTHS: 5,
+  CFV_ELIGIBILITY_FOREMAN_MONTHS: 4,
+  CFV_ELIGIBILITY_SPV_MONTHS: 3,
   CT_ANNUAL_DAYS: 12,
   CT_MAX_SINGLE: 6,
   CT_MAX_WITH_CFV: 4,
@@ -44,6 +48,7 @@ function baseInput(over: Partial<ValidationInput> = {}): ValidationInput {
       teamId: 1,
       sectionId: 1,
       status: "ACTIVE",
+      positionCode: "CREW",
       positionIsOperational: false,
     },
     leaveType: {
@@ -268,5 +273,35 @@ describe("deteksi konflik (AC-007)", () => {
       }),
     );
     expect(codes(r)).toContain("POSITION_CONFLICT");
+  });
+});
+
+describe("eligibility CFV per jabatan (PRD §1A.8)", () => {
+  it("Crew = 5 bulan", () => {
+    expect(cfvEligibilityMonths("CREW", SETTINGS)).toBe(5);
+  });
+  it("Foreman/Wafor = 4 bulan", () => {
+    expect(cfvEligibilityMonths("FOREMAN", SETTINGS)).toBe(4);
+    expect(cfvEligibilityMonths("WAFOR", SETTINGS)).toBe(4);
+  });
+  it("SPV/WSPV/Koordinator = 3 bulan", () => {
+    expect(cfvEligibilityMonths("SPV", SETTINGS)).toBe(3);
+    expect(cfvEligibilityMonths("WAKIL_SPV", SETTINGS)).toBe(3);
+    expect(cfvEligibilityMonths("KOORDINATOR", SETTINGS)).toBe(3);
+  });
+  it("CFV ditolak bila masa kerja kurang dari syarat jabatan", () => {
+    const input = baseInput({
+      employee: {
+        ...baseInput().employee,
+        positionCode: "FOREMAN",
+        effectiveDate: D("2026-08-01"), // ~2 bulan sebelum 2026-10-02
+      },
+      leaveType: { ...baseInput().leaveType, code: "CFV", category: "CFV" as const },
+      startDate: D("2026-11-02"),
+      endDate: D("2026-11-13"), // 12 hari
+    });
+    const r = validateLeaveRequest(input);
+    expect(r.valid).toBe(false);
+    expect(codes(r)).toContain("NOT_ELIGIBLE");
   });
 });

@@ -24,7 +24,7 @@ function parseId(raw: string): number {
 async function loadRequestForAttachment(requestId: number) {
   const item = await db.leaveRequest.findUnique({
     where: { id: requestId },
-    include: { employee: { select: { teamId: true, sectionId: true, departmentId: true } } },
+    include: { employee: { select: { teamId: true, sectionId: true, departmentId: true, divisionId: true } } },
   });
   if (!item) throw new ApiError("NOT_FOUND", "Pengajuan tidak ditemukan.", 404);
   return item;

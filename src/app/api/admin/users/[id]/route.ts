@@ -9,6 +9,7 @@ import { auditLog, getRequestMeta } from "@/lib/audit";
 const ROLE_NAMES = [
   "ADMIN",
   "SPV",
+  "WSPV",
   "FOREMAN",
   "WAFOR",
   "KOORDINATOR",

@@ -58,6 +58,7 @@ const STEP_ROLE_TO_STATUS: Record<WorkflowStepRole, RequestStatus> = {
   [WorkflowStepRole.FOREMAN]: RequestStatus.PENDING_FOREMAN,
   [WorkflowStepRole.WAFOR]: RequestStatus.PENDING_WAFOR,
   [WorkflowStepRole.KOORDINATOR]: RequestStatus.PENDING_KOORDINATOR,
+  [WorkflowStepRole.WSPV]: RequestStatus.PENDING_SPV, // WSPV & SPV satu jenjang (saling menggantikan)
   [WorkflowStepRole.SPV]: RequestStatus.PENDING_SPV,
 };
 
@@ -73,6 +74,7 @@ const STEP_LABELS: Record<WorkflowStepRole, string> = {
   [WorkflowStepRole.FOREMAN]: "Foreman",
   [WorkflowStepRole.WAFOR]: "Wafor",
   [WorkflowStepRole.KOORDINATOR]: "Koordinator",
+  [WorkflowStepRole.WSPV]: "WSPV",
   [WorkflowStepRole.SPV]: "SPV",
 };
 
@@ -113,7 +115,7 @@ export interface StepContext {
   employeeId: number;
   status: RequestStatus;
   currentStepOrder: number | null;
-  employee: { teamId: number; sectionId: number; departmentId: number };
+  employee: { teamId: number; sectionId: number; departmentId: number; divisionId: number };
   workflow: { steps: Array<{ stepOrder: number; role: WorkflowStepRole }> } | null;
 }
 
@@ -155,10 +157,13 @@ function stepRoleOf(req: StepContext): WorkflowStepRole | null {
   return STATUS_TO_STEP_ROLE[req.status] ?? null;
 }
 
-/** Role yang boleh memutuskan pada step ini (WAFOR <-> FOREMAN saling menggantikan, PRD §24). */
+/** Role yang boleh memutuskan pada step ini (WAFOR <-> FOREMAN, WSPV <-> SPV saling menggantikan). */
 function allowedRoles(stepRole: WorkflowStepRole): RoleName[] {
   if (stepRole === WorkflowStepRole.FOREMAN || stepRole === WorkflowStepRole.WAFOR) {
     return ["FOREMAN", "WAFOR"];
+  }
+  if (stepRole === WorkflowStepRole.SPV || stepRole === WorkflowStepRole.WSPV) {
+    return ["SPV", "WSPV"];
   }
   return [stepRole];
 }
@@ -172,6 +177,8 @@ function inScope(
   switch (stepRole) {
     case WorkflowStepRole.SPV:
       return approver.departmentId === requester.departmentId;
+    case WorkflowStepRole.WSPV:
+      return approver.divisionId === requester.divisionId;
     case WorkflowStepRole.KOORDINATOR:
       return approver.sectionId === requester.sectionId;
     case WorkflowStepRole.FOREMAN:
@@ -243,6 +250,7 @@ export function canViewRequest(
   if (hasRole(user, "FOREMAN", "WAFOR") && emp.teamId === req.employee.teamId) return true;
   if (hasRole(user, "KOORDINATOR") && emp.sectionId === req.employee.sectionId) return true;
   if (hasRole(user, "SPV") && emp.departmentId === req.employee.departmentId) return true;
+  if (hasRole(user, "WSPV") && emp.divisionId === req.employee.divisionId) return true;
   return false;
 }
 

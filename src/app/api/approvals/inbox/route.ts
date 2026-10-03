@@ -31,6 +31,7 @@ export async function GET(req: Request) {
             teamId: true,
             sectionId: true,
             departmentId: true,
+            divisionId: true,
             team: { select: { name: true } },
           },
         },

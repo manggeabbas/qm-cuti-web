@@ -52,7 +52,8 @@ export async function GET(req: Request) {
       hasRole(user, "KOORDINATOR") ||
       hasRole(user, "WAFOR") ||
       hasRole(user, "FOREMAN") ||
-      hasRole(user, "SPV");
+      hasRole(user, "SPV") ||
+      hasRole(user, "WSPV");
 
     if (!isAdmin) {
       if (!user.employee) {
@@ -64,6 +65,7 @@ export async function GET(req: Request) {
         if (hasRole(user, "FOREMAN", "WAFOR")) orgConds.push({ teamId: user.employee.teamId });
         if (hasRole(user, "KOORDINATOR")) orgConds.push({ sectionId: user.employee.sectionId });
         if (hasRole(user, "SPV")) orgConds.push({ departmentId: user.employee.departmentId });
+        if (hasRole(user, "WSPV")) orgConds.push({ divisionId: user.employee.divisionId });
         employeeWhere.OR = orgConds;
         if (filterEmployeeId != null) where.employeeId = filterEmployeeId;
       } else {
