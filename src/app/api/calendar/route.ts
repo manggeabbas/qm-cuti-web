@@ -104,6 +104,8 @@ export async function GET(req: Request) {
         employeeName: null as string | null,
         teamCode: r.team.code,
         leaveType: null as string | null,
+        shiftCode: r.shiftType.code,
+        shiftName: r.shiftType.name,
       })),
     ];
 

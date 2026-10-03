@@ -29,6 +29,8 @@ interface CalEvent {
   employeeName?: string;
   teamCode?: string;
   leaveType?: string;
+  shiftCode?: string;
+  shiftName?: string;
 }
 
 interface Team {
@@ -45,6 +47,14 @@ const KIND_META: Record<CalEvent["kind"], { label: string; dot: string; chip: st
 };
 
 const DAY_NAMES = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+
+/** Warna highlight penuh sel tanggal sesuai kode shift. */
+const SHIFT_CELL: Record<string, { bg: string; text: string }> = {
+  PAGI: { bg: "bg-amber-100", text: "text-amber-800" },
+  SORE: { bg: "bg-sky-100", text: "text-sky-800" },
+  MALAM: { bg: "bg-violet-100", text: "text-violet-800" },
+};
+const SHIFT_CELL_DEFAULT = { bg: "bg-purple-100", text: "text-purple-800" };
 
 function monthTitle(y: number, m: number): string {
   return new Intl.DateTimeFormat("id-ID", {
@@ -326,31 +336,46 @@ export default function KalenderPage() {
                 const inMonth = parseISODate(iso).getMonth() === month;
                 const evs = byDay.get(iso) ?? [];
                 const isSel = selected === iso;
+                const shift = evs.find((e) => e.kind === "shift");
+                const shiftStyle =
+                  inMonth && shift?.shiftCode
+                    ? (SHIFT_CELL[shift.shiftCode] ?? SHIFT_CELL_DEFAULT)
+                    : null;
+                const otherEvs = evs.filter((e) => e.kind !== "shift");
                 return (
                   <button
                     key={iso}
                     onClick={() => setSelected(iso)}
                     className={`flex min-h-11 flex-col items-center justify-start rounded-lg p-1 text-xs transition sm:min-h-16 sm:p-1.5 ${
                       isSel
-                        ? "bg-emerald-100 ring-2 ring-emerald-500"
-                        : inMonth
-                          ? "bg-slate-50 hover:bg-slate-100"
-                          : "bg-white text-slate-300"
+                        ? `${shiftStyle ? shiftStyle.bg : "bg-emerald-100"} ring-2 ring-emerald-500`
+                        : shiftStyle
+                          ? `${shiftStyle.bg} hover:brightness-95`
+                          : inMonth
+                            ? "bg-slate-50 hover:bg-slate-100"
+                            : "bg-white text-slate-300"
                     }`}
                   >
                     <span className={`font-semibold ${inMonth ? "text-slate-800" : "text-slate-300"}`}>
                       {dayNum}
                     </span>
+                    {shiftStyle && shift?.shiftName && (
+                      <span
+                        className={`mt-0.5 rounded px-1 py-px text-[9px] font-bold uppercase sm:text-[10px] ${shiftStyle.text}`}
+                      >
+                        {shift.shiftName}
+                      </span>
+                    )}
                     <span className="mt-0.5 flex gap-0.5">
-                      {evs.slice(0, 3).map((e, i) => (
+                      {otherEvs.slice(0, 3).map((e, i) => (
                         <span
                           key={`${e.id}-${i}`}
                           className={`h-1.5 w-1.5 rounded-full ${KIND_META[e.kind]?.dot ?? "bg-slate-400"}`}
                         />
                       ))}
                     </span>
-                    {evs.length > 3 && (
-                      <span className="text-[9px] text-slate-400">+{evs.length - 3}</span>
+                    {otherEvs.length > 3 && (
+                      <span className="text-[9px] text-slate-400">+{otherEvs.length - 3}</span>
                     )}
                   </button>
                 );
