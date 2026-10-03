@@ -19,8 +19,8 @@ interface TeamOpt { id: number; code: string; name: string; }
 
 const STEP_ROLES = ["KOORDINATOR", "WAFOR", "FOREMAN", "WSPV", "SPV"];
 const STEP_LABEL: Record<string, string> = {
-  KOORDINATOR: "Koordinator", WAFOR: "Wafor", FOREMAN: "Foreman",
-  WSPV: "WSPV", SPV: "SPV",
+  KOORDINATOR: "Koordinator", WAFOR: "Wakil Foreman", FOREMAN: "Foreman",
+  WSPV: "Wakil Supervisor", SPV: "Supervisor",
 };
 
 const EMPTY = { name: "", teamId: "", isDefault: false, isActive: true, steps: ["FOREMAN", "SPV"] as string[] };
