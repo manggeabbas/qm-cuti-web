@@ -16,6 +16,7 @@ import {
   fetchJson,
   fmtNum,
   formatDateID,
+  groupByPackage,
   type LeaveRequestItem,
 } from "@/components/leave-helpers";
 
@@ -66,6 +67,8 @@ export default function PengajuanListPage() {
     return items.filter((i) => i.status === tab);
   }, [items, tab]);
 
+  const groups = useMemo(() => groupByPackage(filtered), [filtered]);
+
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   return (
@@ -100,7 +103,7 @@ export default function PengajuanListPage() {
       {error && <ErrorBox message={error} />}
       {items === null && !error ? (
         <Spinner />
-      ) : filtered.length === 0 ? (
+      ) : groups.length === 0 ? (
         <EmptyState
           title="Tidak ada pengajuan"
           hint={
@@ -111,19 +114,32 @@ export default function PengajuanListPage() {
         />
       ) : (
         <div className="space-y-2">
-          {filtered.map((r) => (
-            <Link key={r.id} href={`/pengajuan/${r.id}`}>
+          {groups.map((g) => (
+            <Link key={g.key} href={`/pengajuan/${g.primaryId}`}>
               <Card className="space-y-1">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-bold text-slate-900">{r.leaveType.name}</p>
-                  <Badge status={r.status} />
+                  <p className="text-sm font-bold text-slate-900">
+                    {g.isPackage && <span className="mr-1">📦</span>}
+                    {g.title}
+                  </p>
+                  <Badge status={g.status} />
                 </div>
                 <p className="text-sm text-slate-600">
-                  {formatDateID(r.startDate)} – {formatDateID(r.endDate)} ·{" "}
-                  {fmtNum(r.totalDays)} hari
+                  {formatDateID(g.startDate)} – {formatDateID(g.endDate)} ·{" "}
+                  {fmtNum(g.totalDays)} hari
                 </p>
-                {r.reason && (
-                  <p className="truncate text-xs text-slate-500">“{r.reason}”</p>
+                {g.isPackage && (
+                  <div className="space-y-0.5 pt-0.5">
+                    {g.parts.map((p) => (
+                      <p key={p.id} className="text-xs text-slate-500">
+                        · {p.leaveType.name}: {formatDateID(p.startDate)} –{" "}
+                        {formatDateID(p.endDate)} ({fmtNum(p.totalDays)} hari)
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {g.reason && (
+                  <p className="truncate text-xs text-slate-500">“{g.reason}”</p>
                 )}
               </Card>
             </Link>

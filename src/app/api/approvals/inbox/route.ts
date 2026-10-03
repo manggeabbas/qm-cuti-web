@@ -57,6 +57,8 @@ export async function GET(req: Request) {
       reason: r.reason,
       submittedAt: r.submittedAt,
       currentStepOrder: r.currentStepOrder,
+      packageId: r.packageId,
+      packageOrder: r.packageOrder,
       employee: {
         id: r.employee.id,
         name: r.employee.name,

@@ -568,6 +568,67 @@ export async function returnRequest(requestId: number, approver: SessionUser, co
 }
 
 /**
+ * Keputusan paket: pengajuan yang terikat packageId diputuskan sebagai satu
+ * kesatuan (all-or-nothing) — tidak bisa sebagian disetujui sebagian ditolak.
+ */
+
+/** Ambil semua id request dalam satu paket (urut packageOrder); [requestId] bila bukan paket. */
+export async function packageRequestIds(requestId: number): Promise<number[]> {
+  const req = await db.leaveRequest.findUnique({
+    where: { id: requestId },
+    select: { packageId: true },
+  });
+  if (!req) throw new ApiError("NOT_FOUND", "Pengajuan tidak ditemukan.", 404);
+  if (!req.packageId) return [requestId];
+  const sibs = await db.leaveRequest.findMany({
+    where: { packageId: req.packageId },
+    select: { id: true },
+    orderBy: [{ packageOrder: "asc" }, { id: "asc" }],
+  });
+  return sibs.map((s) => s.id);
+}
+
+/** Pastikan approver boleh memutuskan SEMUA bagian paket sebelum ada yang dieksekusi. */
+async function assertMayDecidePackage(ids: number[], approver: SessionUser, aksi: string) {
+  for (const id of ids) {
+    const req = await loadForDecision(id);
+    assertPending(req, aksi);
+    const stepRole = stepRoleOf(req);
+    if (!stepRole) {
+      throw new ApiError("WORKFLOW_STEP_NOT_FOUND", "Langkah approval aktif tidak ditemukan.", 500);
+    }
+    assertMayDecide(approver, req, stepRole);
+  }
+}
+
+/** Setujui seluruh paket sekaligus. */
+export async function approvePackage(requestId: number, approver: SessionUser, comment?: string) {
+  const ids = await packageRequestIds(requestId);
+  await assertMayDecidePackage(ids, approver, "disetujui");
+  const out = [];
+  for (const id of ids) out.push(await approveRequest(id, approver, comment));
+  return out;
+}
+
+/** Tolak seluruh paket sekaligus — comment WAJIB. */
+export async function rejectPackage(requestId: number, approver: SessionUser, comment?: string) {
+  const ids = await packageRequestIds(requestId);
+  await assertMayDecidePackage(ids, approver, "ditolak");
+  const out = [];
+  for (const id of ids) out.push(await rejectRequest(id, approver, comment));
+  return out;
+}
+
+/** Kembalikan seluruh paket ke DRAFT untuk direvisi pemohon. */
+export async function returnPackage(requestId: number, approver: SessionUser, comment?: string) {
+  const ids = await packageRequestIds(requestId);
+  await assertMayDecidePackage(ids, approver, "dikembalikan");
+  const out = [];
+  for (const id of ids) out.push(await returnRequest(id, approver, comment));
+  return out;
+}
+
+/**
  * Pemohon (atau ADMIN) meminta pembatalan pengajuan yang sedang berjalan /
  * sudah disetujui. Status -> CANCEL_REQUESTED.
  */

@@ -48,6 +48,15 @@ interface RequestDetail extends Omit<LeaveRequestItem, "leaveType"> {
   notes?: string | null;
   packageId?: string | null;
   packageOrder?: number | null;
+  packageParts?: Array<{
+    id: number;
+    packageOrder: number | null;
+    status: string;
+    startDate: string;
+    endDate: string;
+    totalDays: number | string;
+    leaveType: { id: number; code: string; name: string };
+  }> | null;
   cancelReason?: string | null;
   decidedAt?: string | null;
   approvals?: ApprovalItem[];
@@ -148,6 +157,28 @@ export default function PengajuanDetailPage() {
             label="Paket"
             value={`CFV+CT${data.packageOrder ? ` · bagian ${data.packageOrder} dari 2` : ""}`}
           />
+        )}
+        {data.packageParts && data.packageParts.length > 1 && (
+          <div className="rounded-xl border border-cyan-200 bg-cyan-50/60 p-3">
+            <p className="mb-1.5 text-sm font-bold text-slate-900">
+              📦 Paket {data.packageParts.map((p) => p.leaveType.code).join(" + ")}
+            </p>
+            <div className="space-y-1">
+              {data.packageParts.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-slate-600">
+                    {p.leaveType.name}: {formatDateID(p.startDate)} – {formatDateID(p.endDate)} (
+                    {fmtNum(p.totalDays)} hari)
+                    {p.id === data.id && <span className="ml-1 font-semibold text-cyan-700">← ini</span>}
+                  </span>
+                  <Badge status={p.status} />
+                </div>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              Keputusan approval berlaku untuk seluruh bagian paket sekaligus.
+            </p>
+          </div>
         )}
         {data.decidedAt && <Row label="Diputuskan" value={formatDateTimeID(data.decidedAt)} />}
         {data.cancelReason && <Row label="Alasan pembatalan" value={data.cancelReason} />}

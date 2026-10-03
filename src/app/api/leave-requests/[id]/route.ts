@@ -53,7 +53,33 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!canViewRequest(user, item)) {
       throw new ApiError("FORBIDDEN", "Anda tidak memiliki akses ke pengajuan ini.", 403);
     }
-    return ok(item);
+    // Bagian lain dalam paket yang sama (bila ada)
+    let packageParts: Array<{
+      id: number;
+      packageOrder: number | null;
+      status: string;
+      startDate: unknown;
+      endDate: unknown;
+      totalDays: unknown;
+      leaveType: { id: number; code: string; name: string };
+    }> | null = null;
+    if (item.packageId) {
+      const parts = await db.leaveRequest.findMany({
+        where: { packageId: item.packageId },
+        select: {
+          id: true,
+          packageOrder: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          totalDays: true,
+          leaveType: { select: { id: true, code: true, name: true } },
+        },
+        orderBy: [{ packageOrder: "asc" }, { id: "asc" }],
+      });
+      if (parts.length > 1) packageParts = parts;
+    }
+    return ok({ ...item, packageParts });
   } catch (e) {
     return toErrorResponse(e);
   }

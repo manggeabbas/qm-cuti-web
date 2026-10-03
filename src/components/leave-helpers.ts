@@ -89,6 +89,8 @@ export interface LeaveRequestItem {
   reason: string;
   submittedAt?: string | null;
   createdAt?: string | null;
+  packageId?: string | null;
+  packageOrder?: number | null;
 }
 
 export const PENDING_STATUSES = [
@@ -100,6 +102,79 @@ export const PENDING_STATUSES = [
 ];
 
 export const APPROVER_ROLES = ["FOREMAN", "WAFOR", "KOORDINATOR", "SPV"];
+
+/** Item minimal yang bisa dikelompokkan sebagai paket. */
+export interface PackageableItem {
+  id: number;
+  packageId?: string | null;
+  packageOrder?: number | null;
+  leaveType: { name: string; code?: string | null };
+  startDate: string;
+  endDate: string;
+  totalDays: number | string;
+  status: string;
+  reason: string;
+}
+
+/** Satu grup tampilan: pengajuan tunggal atau satu paket (CFV+CT). */
+export interface RequestGroup<T extends PackageableItem = PackageableItem> {
+  key: string;
+  isPackage: boolean;
+  /** id bagian pertama (untuk link/detail & aksi approval). */
+  primaryId: number;
+  title: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  status: string;
+  reason: string;
+  parts: T[];
+}
+
+/**
+ * Kelompokkan daftar pengajuan berdasarkan packageId.
+ * Urutan grup mengikuti urutan item pertama yang muncul.
+ */
+export function groupByPackage<T extends PackageableItem>(items: T[]): RequestGroup<T>[] {
+  const groups: RequestGroup<T>[] = [];
+  const byKey = new Map<string, RequestGroup<T>>();
+  for (const it of items) {
+    const key = it.packageId ? `pkg:${it.packageId}` : `single:${it.id}`;
+    let g = byKey.get(key);
+    if (!g) {
+      g = {
+        key,
+        isPackage: !!it.packageId,
+        primaryId: it.id,
+        title: "",
+        startDate: it.startDate,
+        endDate: it.endDate,
+        totalDays: 0,
+        status: it.status,
+        reason: it.reason,
+        parts: [],
+      };
+      byKey.set(key, g);
+      groups.push(g);
+    }
+    g.parts.push(it);
+  }
+  for (const g of groups) {
+    g.parts.sort((a, b) => (a.packageOrder ?? 0) - (b.packageOrder ?? 0) || a.id - b.id);
+    const first = g.parts[0];
+    g.primaryId = first.id;
+    g.startDate = g.parts.reduce((m, p) => (p.startDate < m ? p.startDate : m), g.parts[0].startDate);
+    g.endDate = g.parts.reduce((m, p) => (p.endDate > m ? p.endDate : m), g.parts[0].endDate);
+    g.totalDays = g.parts.reduce((s, p) => s + Number(p.totalDays || 0), 0);
+    // status: pakai status bagian pertama (paket selalu jalan beriringan pasca-perbaikan backend)
+    g.status = first.status;
+    g.reason = first.reason;
+    g.title = g.isPackage
+      ? `Paket ${g.parts.map((p) => p.leaveType.code ?? p.leaveType.name).join(" + ")}`
+      : first.leaveType.name;
+  }
+  return groups;
+}
 
 /** Status yang masih bisa dibatalkan oleh pengaju. */
 export const CANCELLABLE_STATUSES = ["DRAFT", ...PENDING_STATUSES];
