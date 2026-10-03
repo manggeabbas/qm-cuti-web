@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button, Card, Badge, Spinner, EmptyState, PageHeader, ErrorBox, Textarea } from "@/components/ui";
+import Modal from "@/components/Modal";
 import { formatID } from "@/lib/dates-client";
 
 interface InboxItem {
@@ -103,23 +105,37 @@ export default function ApprovalPage() {
       )}
 
       {selected && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center">
-          <div className="w-full max-w-md rounded-t-3xl bg-white p-5 sm:rounded-3xl">
-            <h2 className="text-lg font-bold text-slate-900">Keputusan Approval</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              {selected.employee.name} · {selected.leaveType.name} · {selected.totalDays} hari
-            </p>
-            <div className="mt-3">
-              <Textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Catatan / alasan (wajib untuk penolakan)" />
+        <Modal title="Keputusan Approval" onClose={() => setSelected(null)}>
+          <ErrorBox message={error} />
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-semibold text-slate-900">{selected.employee.name}</p>
+              <p className="text-xs text-slate-500">{selected.employee.nik} · {selected.employee.team.name}</p>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <Button disabled={acting} onClick={() => act("approve")}>Setujui</Button>
-              <Button disabled={acting} variant="danger" onClick={() => act("reject")}>Tolak</Button>
-              <Button disabled={acting} variant="secondary" onClick={() => act("return")}>Revisi</Button>
-            </div>
-            <Button variant="ghost" className="mt-2 w-full" onClick={() => setSelected(null)}>Batal</Button>
+            <Badge status={selected.status} />
           </div>
-        </div>
+          <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+            <p className="font-medium">{selected.leaveType.name} · {selected.totalDays} hari</p>
+            <p className="text-xs text-slate-500">{formatID(selected.startDate)} – {formatID(selected.endDate)}</p>
+            {selected.reason && (
+              <p className="mt-1 text-xs italic text-slate-500">“{selected.reason}”</p>
+            )}
+          </div>
+          <div className="mt-3">
+            <Textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Catatan / alasan (wajib untuk penolakan)" />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <Button disabled={acting} onClick={() => act("approve")}>Setujui</Button>
+            <Button disabled={acting} variant="danger" onClick={() => act("reject")}>Tolak</Button>
+            <Button disabled={acting} variant="secondary" onClick={() => act("return")}>Revisi</Button>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <Link href={`/pengajuan/${selected.id}`} className="text-xs font-semibold text-emerald-700 hover:underline">
+              Lihat detail lengkap ›
+            </Link>
+            <Button variant="ghost" onClick={() => setSelected(null)}>Batal</Button>
+          </div>
+        </Modal>
       )}
     </div>
   );

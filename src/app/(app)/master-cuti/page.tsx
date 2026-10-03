@@ -3,16 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Button,
-  Card,
   Input,
   Select,
   Field,
   Badge,
   PageHeader,
   Spinner,
-  EmptyState,
   ErrorBox,
 } from "@/components/ui";
+import DataTable from "@/components/DataTable";
 import Modal from "@/components/Modal";
 import Pager from "@/components/Pager";
 import { api, Paged } from "@/lib/client-api";
@@ -202,48 +201,35 @@ function LeaveTypeTab() {
       <ErrorBox message={error} />
       {loading ? (
         <Spinner />
-      ) : items.length === 0 ? (
-        <EmptyState title="Belum ada jenis cuti" />
       ) : (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <th className="px-4 py-3">Kode</th>
-                <th className="px-4 py-3">Nama</th>
-                <th className="px-4 py-3">Kategori</th>
-                <th className="px-4 py-3">Hak (hari)</th>
-                <th className="px-4 py-3">Syarat (bln)</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it) => (
-                <tr key={it.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs">{it.code}</td>
-                  <td className="px-4 py-3 font-medium">{it.name}</td>
-                  <td className="px-4 py-3">{CATEGORY_LABEL[it.category] ?? it.category}</td>
-                  <td className="px-4 py-3">{it.defaultDays ?? "-"}</td>
-                  <td className="px-4 py-3">{it.eligibilityMonths ?? "-"}</td>
-                  <td className="px-4 py-3">
-                    <Badge status={it.isActive ? "ACTIVE" : "INACTIVE"} label={it.isActive ? "Aktif" : "Nonaktif"} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => openEdit(it)} className="px-3 py-1.5 text-xs">
-                        Ubah
-                      </Button>
-                      <Button variant="danger" onClick={() => remove(it)} className="px-3 py-1.5 text-xs">
-                        Hapus
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <DataTable
+          rows={items}
+          rowKey={(it) => it.id}
+          emptyTitle="Belum ada jenis cuti"
+          emptyIcon="🗂️"
+          columns={[
+            { key: "code", header: "Kode", render: (it) => <span className="font-mono text-xs">{it.code}</span> },
+            { key: "name", header: "Nama", render: (it) => <span className="font-medium text-slate-900">{it.name}</span> },
+            { key: "category", header: "Kategori", render: (it) => CATEGORY_LABEL[it.category] ?? it.category },
+            { key: "days", header: "Hak (hari)", hideOnMobile: true, render: (it) => it.defaultDays ?? "-" },
+            { key: "elig", header: "Syarat (bln)", hideOnMobile: true, render: (it) => it.eligibilityMonths ?? "-" },
+            {
+              key: "status",
+              header: "Status",
+              render: (it) => <Badge status={it.isActive ? "ACTIVE" : "INACTIVE"} label={it.isActive ? "Aktif" : "Nonaktif"} />,
+            },
+          ]}
+          actions={(it) => (
+            <>
+              <Button size="sm" variant="outline" onClick={() => openEdit(it)}>
+                Ubah
+              </Button>
+              <Button size="sm" variant="danger" onClick={() => remove(it)}>
+                Hapus
+              </Button>
+            </>
+          )}
+        />
       )}
       <Pager page={page} totalPages={totalPages} onPage={setPage} />
 
@@ -443,40 +429,28 @@ function HolidayTab() {
       <ErrorBox message={error} />
       {loading ? (
         <Spinner />
-      ) : items.length === 0 ? (
-        <EmptyState title="Belum ada hari libur" />
       ) : (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full min-w-[520px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Nama</th>
-                <th className="px-4 py-3">Hitung Hari Cuti</th>
-                <th className="px-4 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it) => (
-                <tr key={it.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs">{it.date}</td>
-                  <td className="px-4 py-3 font-medium">{it.name}</td>
-                  <td className="px-4 py-3">{it.countsAsLeaveDay ? "Ya" : "Tidak"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => openEdit(it)} className="px-3 py-1.5 text-xs">
-                        Ubah
-                      </Button>
-                      <Button variant="danger" onClick={() => remove(it)} className="px-3 py-1.5 text-xs">
-                        Hapus
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <DataTable
+          rows={items}
+          rowKey={(it) => it.id}
+          emptyTitle="Belum ada hari libur"
+          emptyIcon="📅"
+          columns={[
+            { key: "date", header: "Tanggal", render: (it) => <span className="font-mono text-xs">{it.date}</span> },
+            { key: "name", header: "Nama", render: (it) => <span className="font-medium text-slate-900">{it.name}</span> },
+            { key: "count", header: "Hitung Hari Cuti", hideOnMobile: true, render: (it) => (it.countsAsLeaveDay ? "Ya" : "Tidak") },
+          ]}
+          actions={(it) => (
+            <>
+              <Button size="sm" variant="outline" onClick={() => openEdit(it)}>
+                Ubah
+              </Button>
+              <Button size="sm" variant="danger" onClick={() => remove(it)}>
+                Hapus
+              </Button>
+            </>
+          )}
+        />
       )}
       <Pager page={page} totalPages={totalPages} onPage={setPage} />
 

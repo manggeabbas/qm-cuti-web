@@ -6,7 +6,8 @@ import { ok, fail, toErrorResponse, getPagination, paged } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { requireRole } from "@/lib/rbac";
 import { auditLog, getRequestMeta } from "@/lib/audit";
-import { parseISODate, toISODate } from "@/lib/dates";
+import { parseISODate, toISODate, todayUTC } from "@/lib/dates";
+import { buildSchedule } from "@/lib/shifts";
 
 const employeeInclude = {
   position: { select: { name: true } },
@@ -44,6 +45,7 @@ export function mapEmployee(e: EmployeeRow) {
     email: e.email,
     phone: e.phone,
     status: e.status,
+    offDayOfWeek: e.offDayOfWeek,
   };
 }
 
@@ -99,7 +101,31 @@ export async function GET(req: Request) {
         take: limit,
       }),
     ]);
-    return ok(paged(rows.map(mapEmployee), total, page, limit));
+
+    // Shift hari ini per regu (dihitung dari pola rotasi).
+    const teamIds = [...new Set(rows.map((r) => r.teamId))];
+    const today = todayUTC();
+    const schedule = teamIds.length > 0 ? await buildSchedule(today, today) : [];
+    const shiftByTeam = new Map<
+      number,
+      { code: string; name: string; startTime: string | null; endTime: string | null; dayOfWeek: number }
+    >();
+    for (const s of schedule) {
+      if (!teamIds.includes(s.team.id)) continue;
+      shiftByTeam.set(s.team.id, {
+        code: s.shiftType.code,
+        name: s.shiftType.name,
+        startTime: s.shiftType.startTime,
+        endTime: s.shiftType.endTime,
+        dayOfWeek: today.getUTCDay(),
+      });
+    }
+
+    const items = rows.map((r) => ({
+      ...mapEmployee(r),
+      shiftToday: shiftByTeam.get(r.teamId) ?? null,
+    }));
+    return ok(paged(items, total, page, limit));
   } catch (e) {
     return toErrorResponse(e);
   }

@@ -19,12 +19,19 @@ const includeChain = {
       id: true,
       code: true,
       name: true,
-      department: {
+      division: {
         select: {
           id: true,
           code: true,
           name: true,
-          division: { select: { id: true, code: true, name: true } },
+          department: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              company: { select: { id: true, code: true, name: true } },
+            },
+          },
         },
       },
     },

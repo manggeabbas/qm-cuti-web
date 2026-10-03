@@ -13,7 +13,7 @@ const updateSectionSchema = createSectionSchema
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const includeParent = { department: { select: { id: true, code: true, name: true } } } as const;
+const includeParent = { division: { select: { id: true, code: true, name: true } } } as const;
 
 /** GET /api/org/sections/[id] */
 export async function GET(req: Request, ctx: Ctx) {
@@ -25,7 +25,7 @@ export async function GET(req: Request, ctx: Ctx) {
       include: includeParent,
     });
     if (!row) return fail("NOT_FOUND", "Seksi tidak ditemukan.", 404);
-    return ok(mapSection(row, row.department));
+    return ok(mapSection(row, row.division));
   } catch (e) {
     return toErrorResponse(e);
   }
@@ -44,8 +44,8 @@ export async function PUT(req: Request, ctx: Ctx) {
     if (!existing) return fail("NOT_FOUND", "Seksi tidak ditemukan.", 404);
 
     if (body.parentId !== undefined) {
-      const parent = await db.department.findUnique({ where: { id: body.parentId } });
-      if (!parent) return fail("INVALID_INPUT", "Departemen induk tidak ditemukan.", 400);
+      const parent = await db.division.findUnique({ where: { id: body.parentId } });
+      if (!parent) return fail("INVALID_INPUT", "Divisi induk tidak ditemukan.", 400);
     }
 
     const updated = await db.section.update({
@@ -53,7 +53,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       data: {
         ...(body.code !== undefined ? { code: body.code } : {}),
         ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.parentId !== undefined ? { departmentId: body.parentId } : {}),
+        ...(body.parentId !== undefined ? { divisionId: body.parentId } : {}),
         ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
       },
       include: includeParent,
@@ -64,11 +64,11 @@ export async function PUT(req: Request, ctx: Ctx) {
       action: "UPDATE_SECTION",
       entityType: "Section",
       entityId: sectionId,
-      oldValue: mapSection(existing, existing.department),
-      newValue: mapSection(updated, updated.department),
+      oldValue: mapSection(existing, existing.division),
+      newValue: mapSection(updated, updated.division),
       ...getRequestMeta(req),
     });
-    return ok(mapSection(updated, updated.department));
+    return ok(mapSection(updated, updated.division));
   } catch (e) {
     if (e instanceof z.ZodError) {
       return fail("VALIDATION_ERROR", e.issues[0]?.message ?? "Input tidak valid.", 422);
@@ -106,7 +106,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
       action: "DELETE_SECTION",
       entityType: "Section",
       entityId: sectionId,
-      oldValue: mapSection(existing, existing.department),
+      oldValue: mapSection(existing, existing.division),
       ...getRequestMeta(req),
     });
     return ok({ message: "Seksi dihapus." });

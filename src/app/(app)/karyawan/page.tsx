@@ -10,13 +10,14 @@ import {
   Badge,
   PageHeader,
   Spinner,
-  EmptyState,
   ErrorBox,
 } from "@/components/ui";
+import DataTable from "@/components/DataTable";
 import Modal from "@/components/Modal";
 import Pager from "@/components/Pager";
 import { api, Paged } from "@/lib/client-api";
 import { hasRole } from "@/lib/role-utils";
+import { SHIFT_CELL, shiftCategory } from "@/lib/shift-colors";
 import type { RoleName } from "@prisma/client";
 
 type Me = { id: number; username: string; roles: RoleName[] };
@@ -37,6 +38,7 @@ interface Employee {
   section: string | null;
   teamId: number;
   team: string | null;
+  shiftToday?: { code: string; name: string; startTime: string | null; endTime: string | null; dayOfWeek: number } | null;
   supervisorId: number | null;
   supervisor: { id: number; nik: string; name: string } | null;
   email: string | null;
@@ -50,8 +52,34 @@ interface Option {
   name: string;
 }
 
+interface OrgOption extends Option {
+  parent?: { id: number; code: string; name: string } | null;
+}
+
 const STATUS_OPTS = ["ACTIVE", "INACTIVE", "RESIGNED"];
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Aktif", INACTIVE: "Nonaktif", RESIGNED: "Resign" };
+
+function ShiftToday({ shift }: { shift: Employee["shiftToday"] }) {
+  if (!shift) return <span className="text-slate-400">—</span>;
+  const cat = shiftCategory({
+    code: shift.code,
+    dayOfWeek: shift.dayOfWeek,
+    startTime: shift.startTime,
+    endTime: shift.endTime,
+  });
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      <span className={`inline-block w-fit rounded px-2 py-0.5 text-xs font-semibold ${cat ? SHIFT_CELL[cat] : "bg-slate-100 text-slate-700"}`}>
+        {shift.code}
+      </span>
+      {shift.startTime && (
+        <span className="text-[10px] text-slate-500">
+          {shift.startTime}–{shift.endTime}
+        </span>
+      )}
+    </span>
+  );
+}
 
 const EMPTY_FORM = {
   nik: "",
@@ -59,8 +87,9 @@ const EMPTY_FORM = {
   effectiveDate: "",
   positionId: "",
   level: "",
-  divisionId: "",
+  companyId: "",
   departmentId: "",
+  divisionId: "",
   sectionId: "",
   teamId: "",
   supervisorId: "",
@@ -77,11 +106,12 @@ export default function KaryawanPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [teamId, setTeamId] = useState("");
-  const [teams, setTeams] = useState<Option[]>([]);
+  const [teams, setTeams] = useState<OrgOption[]>([]);
   const [positions, setPositions] = useState<Option[]>([]);
-  const [divisions, setDivisions] = useState<Option[]>([]);
-  const [departments, setDepartments] = useState<Option[]>([]);
-  const [sections, setSections] = useState<Option[]>([]);
+  const [companies, setCompanies] = useState<OrgOption[]>([]);
+  const [divisions, setDivisions] = useState<OrgOption[]>([]);
+  const [departments, setDepartments] = useState<OrgOption[]>([]);
+  const [sections, setSections] = useState<OrgOption[]>([]);
   const [supervisors, setSupervisors] = useState<{ id: number; nik: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -116,16 +146,18 @@ export default function KaryawanPage() {
       try {
         const { user } = await api<{ user: Me }>("/api/auth/me");
         setMe(user);
-        const [t, p, dv, dp, sc, sv] = await Promise.all([
-          api<Paged<Option>>("/api/org/teams?limit=100"),
+        const [t, p, cp, dv, dp, sc, sv] = await Promise.all([
+          api<Paged<OrgOption>>("/api/org/teams?limit=100"),
           api<Paged<Option>>("/api/positions?limit=100"),
-          api<Paged<Option>>("/api/org/divisions?limit=100"),
-          api<Paged<Option>>("/api/org/departments?limit=100"),
-          api<Paged<Option>>("/api/org/sections?limit=100"),
+          api<Paged<OrgOption>>("/api/org/companies?limit=100"),
+          api<Paged<OrgOption>>("/api/org/divisions?limit=100"),
+          api<Paged<OrgOption>>("/api/org/departments?limit=100"),
+          api<Paged<OrgOption>>("/api/org/sections?limit=100"),
           api<Paged<{ id: number; nik: string; name: string }>>("/api/employees?status=ACTIVE&limit=100"),
         ]);
         setTeams(t.items);
         setPositions(p.items);
+        setCompanies(cp.items);
         setDivisions(dv.items);
         setDepartments(dp.items);
         setSections(sc.items);
@@ -155,8 +187,12 @@ export default function KaryawanPage() {
       effectiveDate: e.effectiveDate,
       positionId: String(e.positionId),
       level: e.level ?? "",
-      divisionId: String(e.divisionId),
+      companyId: (() => {
+        const dept = departments.find((d) => d.id === e.departmentId);
+        return dept?.parent ? String(dept.parent.id) : "";
+      })(),
       departmentId: String(e.departmentId),
+      divisionId: String(e.divisionId),
       sectionId: String(e.sectionId),
       teamId: String(e.teamId),
       supervisorId: e.supervisorId ? String(e.supervisorId) : "",
@@ -224,6 +260,12 @@ export default function KaryawanPage() {
     }
   }
 
+  // Pilihan organisasi mengikuti induk yang dipilih (cascade).
+  const deptOptions = departments.filter((d) => !form.companyId || d.parent?.id === Number(form.companyId));
+  const divOptions = divisions.filter((v) => !form.departmentId || v.parent?.id === Number(form.departmentId));
+  const secOptions = sections.filter((s) => !form.divisionId || s.parent?.id === Number(form.divisionId));
+  const teamOptions = teams.filter((t) => !form.sectionId || t.parent?.id === Number(form.sectionId));
+
   return (
     <div>
       <PageHeader
@@ -282,52 +324,49 @@ export default function KaryawanPage() {
       <ErrorBox message={error} />
       {loading ? (
         <Spinner />
-      ) : items.length === 0 ? (
-        <EmptyState title="Belum ada karyawan" hint="Tambahkan data karyawan baru." />
       ) : (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <th className="px-4 py-3">NIK</th>
-                <th className="px-4 py-3">Nama</th>
-                <th className="px-4 py-3">Jabatan</th>
-                <th className="px-4 py-3">Regu</th>
-                <th className="px-4 py-3">Atasan</th>
-                <th className="px-4 py-3">Status</th>
-                {isAdmin && <th className="px-4 py-3 text-right">Aksi</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((e) => (
-                <tr key={e.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs">{e.nik}</td>
-                  <td className="px-4 py-3 font-medium">{e.name}</td>
-                  <td className="px-4 py-3">{e.position ?? "-"}</td>
-                  <td className="px-4 py-3">{e.team ?? "-"}</td>
-                  <td className="px-4 py-3">{e.supervisor?.name ?? "-"}</td>
-                  <td className="px-4 py-3">
-                    <Badge status={e.status} label={STATUS_LABEL[e.status] ?? e.status} />
-                  </td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="secondary" onClick={() => openEdit(e)} className="px-3 py-1.5 text-xs">
-                          Ubah
-                        </Button>
-                        {e.status === "ACTIVE" && (
-                          <Button variant="danger" onClick={() => deactivate(e)} className="px-3 py-1.5 text-xs">
-                            Nonaktifkan
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <DataTable
+          rows={items}
+          rowKey={(e) => e.id}
+          emptyTitle="Belum ada karyawan"
+          emptyHint="Tambahkan data karyawan baru."
+          emptyIcon="👥"
+          columns={[
+            { key: "nik", header: "NIK", render: (e) => <span className="font-mono text-xs">{e.nik}</span> },
+            { key: "name", header: "Nama", render: (e) => <span className="font-medium text-slate-900">{e.name}</span> },
+            { key: "position", header: "Jabatan", render: (e) => e.position ?? "-" },
+            { key: "team", header: "Regu", render: (e) => e.team ?? "-" },
+            {
+              key: "shift",
+              header: "Shift Hari Ini",
+              hideOnMobile: true,
+              render: (e) => <ShiftToday shift={e.shiftToday} />,
+            },
+            { key: "supervisor", header: "Atasan", hideOnMobile: true, render: (e) => e.supervisor?.name ?? "-" },
+            {
+              key: "status",
+              header: "Status",
+              hideOnMobile: true,
+              render: (e) => <Badge status={e.status} label={STATUS_LABEL[e.status] ?? e.status} />,
+            },
+          ]}
+          actions={
+            isAdmin
+              ? (e) => (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(e)}>
+                      Ubah
+                    </Button>
+                    {e.status === "ACTIVE" && (
+                      <Button size="sm" variant="danger" onClick={() => deactivate(e)}>
+                        Nonaktifkan
+                      </Button>
+                    )}
+                  </>
+                )
+              : undefined
+          }
+        />
       )}
       <Pager page={page} totalPages={totalPages} onPage={setPage} />
 
@@ -369,20 +408,58 @@ export default function KaryawanPage() {
                   ))}
               </Select>
             </Field>
-            <Field label="Divisi" required>
-              <Select value={form.divisionId} onChange={(e) => set("divisionId", e.target.value)}>
+            <Field label="Perusahaan" required>
+              <Select
+                value={form.companyId}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    companyId: e.target.value,
+                    departmentId: "",
+                    divisionId: "",
+                    sectionId: "",
+                    teamId: "",
+                  }))
+                }
+              >
                 <option value="">— Pilih —</option>
-                {divisions.map((d) => (
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Departemen" required>
+              <Select
+                value={form.departmentId}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    departmentId: e.target.value,
+                    divisionId: "",
+                    sectionId: "",
+                    teamId: "",
+                  }))
+                }
+              >
+                <option value="">— Pilih —</option>
+                {deptOptions.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label="Departemen" required>
-              <Select value={form.departmentId} onChange={(e) => set("departmentId", e.target.value)}>
+            <Field label="Divisi" required>
+              <Select
+                value={form.divisionId}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, divisionId: e.target.value, sectionId: "", teamId: "" }))
+                }
+              >
                 <option value="">— Pilih —</option>
-                {departments.map((d) => (
+                {divOptions.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
@@ -390,9 +467,12 @@ export default function KaryawanPage() {
               </Select>
             </Field>
             <Field label="Seksi" required>
-              <Select value={form.sectionId} onChange={(e) => set("sectionId", e.target.value)}>
+              <Select
+                value={form.sectionId}
+                onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value, teamId: "" }))}
+              >
                 <option value="">— Pilih —</option>
-                {sections.map((s) => (
+                {secOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -402,7 +482,7 @@ export default function KaryawanPage() {
             <Field label="Regu" required>
               <Select value={form.teamId} onChange={(e) => set("teamId", e.target.value)}>
                 <option value="">— Pilih —</option>
-                {teams.map((t) => (
+                {teamOptions.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>

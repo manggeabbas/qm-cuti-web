@@ -1,7 +1,8 @@
 /** Logika bisnis OFF (PRD §22–§23). */
 import db from "./db";
 import { getNumberSetting } from "./settings";
-import { addDays, dayOfWeek, startOfWeekMonday, toISODate } from "./dates";
+import { addDays, dayOfWeek, toISODate } from "./dates";
+import { getShiftRotationConfig, startOfShiftWeek } from "./shifts";
 
 export interface OffIssue {
   code: string;
@@ -33,8 +34,10 @@ export async function validateOffRequest(employeeId: number, date: Date): Promis
     return issues;
   }
 
-  // Maks 1 OFF individu per minggu (Senin–Minggu)
-  const weekStart = startOfWeekMonday(date);
+  // Maks 1 OFF individu per minggu operasional (mengikuti awal minggu rotasi,
+  // default Kamis–Rabu; Rabu sendiri OFF bersama).
+  const { weekStartDow } = await getShiftRotationConfig();
+  const weekStart = startOfShiftWeek(date, weekStartDow);
   const weekEnd = addDays(weekStart, 6);
   const existing = await db.offSchedule.findFirst({
     where: {
@@ -74,41 +77,4 @@ export async function validateOffRequest(employeeId: number, date: Date): Promis
   }
 
   return issues;
-}
-
-/** Generate roster shift rotasi 3 regu x 3 shift untuk rentang tanggal (Rabu dilewati = OFF bersama). */
-export async function generateRoster(from: Date, to: Date): Promise<{ created: number; skipped: number }> {
-  const teams = await db.team.findMany({
-    where: { isActive: true, code: { in: ["REGU_A", "REGU_B", "REGU_C"] } },
-    orderBy: { code: "asc" },
-  });
-  const shifts = await db.shiftType.findMany({ where: { isActive: true }, orderBy: { code: "asc" } });
-  // Urutan rotasi: PAGI, SORE, MALAM
-  const order = ["PAGI", "SORE", "MALAM"]
-    .map((c) => shifts.find((s) => s.code === c))
-    .filter((s): s is (typeof shifts)[number] => !!s);
-  if (teams.length === 0 || order.length === 0) throw new Error("Data regu/shift belum lengkap.");
-
-  let created = 0;
-  let skipped = 0;
-  let dayIndex = 0;
-  for (let d = new Date(from); d <= to; d = addDays(d, 1)) {
-    if (dayOfWeek(d) === 3) {
-      dayIndex++;
-      continue; // Rabu: OFF bersama
-    }
-    for (let t = 0; t < teams.length; t++) {
-      const shift = order[(dayIndex + t) % order.length];
-      const res = await db.shiftRoster.upsert({
-        where: { date_teamId: { date: d, teamId: teams[t].id } },
-        create: { date: d, teamId: teams[t].id, shiftTypeId: shift.id },
-        update: { shiftTypeId: shift.id },
-      });
-      void res;
-      created++;
-    }
-    dayIndex++;
-    void skipped;
-  }
-  return { created, skipped: 0 };
 }

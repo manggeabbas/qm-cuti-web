@@ -8,22 +8,27 @@ export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!username.trim() || !password) {
+      setError("Username dan password wajib diisi.");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
-      const json = await res.json();
-      if (!json.ok) {
-        setError(json.error.message);
+      const json = await res.json().catch(() => null);
+      if (!json?.ok) {
+        setError(json?.error?.message ?? `Tidak dapat masuk (HTTP ${res.status}).`);
         return;
       }
       router.push("/dashboard");
@@ -47,18 +52,50 @@ export default function LoginPage() {
         </div>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Username / NIK" required>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="cth: 900005" autoComplete="username" />
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="cth: 900005"
+              autoComplete="username"
+              autoFocus
+            />
           </Field>
-          <Field label="Password" required>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" />
-          </Field>
+
+          <div>
+            <label
+              htmlFor="login-password"
+              className="mb-1 block text-sm font-medium text-slate-700"
+            >
+              Password <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Input
+                id="login-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="pr-20"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                className="absolute inset-y-0 right-0 my-auto mr-1 h-8 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-emerald-700"
+              >
+                {showPassword ? "Sembunyikan" : "Lihat"}
+              </button>
+            </div>
+          </div>
+
           <ErrorBox message={error} />
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Memeriksa..." : "Masuk"}
           </Button>
         </form>
         <p className="mt-4 text-center text-xs text-slate-400">
-          Akun demo: admin / admin123 · crew1 / cuti123
+          Lupa password? Hubungi administrator untuk reset.
         </p>
       </div>
     </div>

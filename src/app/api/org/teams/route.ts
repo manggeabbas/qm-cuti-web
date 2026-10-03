@@ -12,12 +12,19 @@ const sectionChain = {
       id: true,
       code: true,
       name: true,
-      department: {
+      division: {
         select: {
           id: true,
           code: true,
           name: true,
-          division: { select: { id: true, code: true, name: true } },
+          department: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              company: { select: { id: true, code: true, name: true } },
+            },
+          },
         },
       },
     },
@@ -44,14 +51,19 @@ export function mapTeam(t: TeamRow) {
       id: sec.id,
       code: sec.code,
       name: sec.name,
-      department: {
-        id: sec.department.id,
-        code: sec.department.code,
-        name: sec.department.name,
-        division: {
-          id: sec.department.division.id,
-          code: sec.department.division.code,
-          name: sec.department.division.name,
+      division: {
+        id: sec.division.id,
+        code: sec.division.code,
+        name: sec.division.name,
+        department: {
+          id: sec.division.department.id,
+          code: sec.division.department.code,
+          name: sec.division.department.name,
+          company: {
+            id: sec.division.department.company.id,
+            code: sec.division.department.company.code,
+            name: sec.division.department.company.name,
+          },
         },
       },
     },

@@ -18,17 +18,21 @@ import {
   toISODate,
   type MeUser,
 } from "@/components/leave-helpers";
+import { SHIFT_CELL, SHIFT_CATEGORY_ORDER, SHIFT_DOT, SHIFT_LABEL, shiftCategory } from "@/lib/shift-colors";
 
 interface CalEvent {
   id: number | string;
   title: string;
   start: string;
   end: string;
-  kind: "leave" | "off" | "holiday";
+  kind: "leave" | "off" | "holiday" | "shift";
   status?: string;
   employeeName?: string;
   teamCode?: string;
   leaveType?: string;
+  shiftCode?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 interface Team {
@@ -41,6 +45,7 @@ const KIND_META: Record<CalEvent["kind"], { label: string; dot: string; chip: st
   leave: { label: "Cuti", dot: "bg-blue-500", chip: "bg-blue-100 text-blue-800" },
   off: { label: "OFF", dot: "bg-yellow-500", chip: "bg-yellow-100 text-yellow-800" },
   holiday: { label: "Libur", dot: "bg-red-500", chip: "bg-red-100 text-red-800" },
+  shift: { label: "Shift", dot: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-800" },
 };
 
 const DAY_NAMES = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -193,35 +198,61 @@ export default function KalenderPage() {
                 </div>
               ))}
               {cells.map((iso) => {
-                const dayNum = parseISODate(iso).getDate();
-                const inMonth = parseISODate(iso).getMonth() === month;
+                const dateObj = parseISODate(iso);
+                const dayNum = dateObj.getDate();
+                const dow = dateObj.getUTCDay();
+                const inMonth = dateObj.getMonth() === month;
                 const evs = byDay.get(iso) ?? [];
                 const isSel = selected === iso;
+                const dayShifts = evs.filter((e) => e.kind === "shift");
+                const soleShift = dayShifts.length === 1 ? dayShifts[0] : null;
+                const others = evs.filter((e) => e.kind !== "shift");
+                const isEmployeeView = !Array.isArray(teams);
+                const ownOff = isEmployeeView && others.some((e) => e.kind === "off");
+                const cat = inMonth
+                  ? ownOff
+                    ? "OFF"
+                    : soleShift
+                      ? shiftCategory({
+                          code: soleShift.shiftCode,
+                          dayOfWeek: dow,
+                          startTime: soleShift.startTime,
+                          endTime: soleShift.endTime,
+                        })
+                      : dow === 3
+                        ? "OFF"
+                        : null
+                  : null;
                 return (
                   <button
                     key={iso}
                     onClick={() => setSelected(iso)}
-                    className={`flex min-h-11 flex-col items-center justify-start rounded-lg p-1 text-xs transition sm:min-h-16 sm:p-1.5 ${
-                      isSel
-                        ? "bg-emerald-100 ring-2 ring-emerald-500"
-                        : inMonth
-                          ? "bg-slate-50 hover:bg-slate-100"
-                          : "bg-white text-slate-300"
+                    className={`flex min-h-14 flex-col items-center justify-start rounded-lg p-1 text-xs transition sm:min-h-16 sm:p-1.5 ${
+                      isSel ? "ring-2 ring-emerald-500 " : ""
+                    }${
+                      inMonth
+                        ? cat
+                          ? SHIFT_CELL[cat]
+                          : "bg-slate-50 hover:bg-slate-100"
+                        : "bg-white text-slate-300"
                     }`}
                   >
-                    <span className={`font-semibold ${inMonth ? "text-slate-800" : "text-slate-300"}`}>
-                      {dayNum}
-                    </span>
-                    <span className="mt-0.5 flex gap-0.5">
-                      {evs.slice(0, 3).map((e, i) => (
-                        <span
-                          key={`${e.id}-${i}`}
-                          className={`h-1.5 w-1.5 rounded-full ${KIND_META[e.kind]?.dot ?? "bg-slate-400"}`}
-                        />
-                      ))}
-                    </span>
-                    {evs.length > 3 && (
-                      <span className="text-[9px] text-slate-400">+{evs.length - 3}</span>
+                    <span className="font-semibold">{dayNum}</span>
+                    {inMonth && (ownOff || soleShift || dow === 3) && (
+                      <span className="text-[9px] font-bold">{ownOff ? "OFF" : soleShift ? soleShift.shiftCode : "OFF"}</span>
+                    )}
+                    {others.length > 0 && (
+                      <span className="mt-0.5 flex gap-0.5">
+                        {others.slice(0, 3).map((e, i) => (
+                          <span
+                            key={`${e.id}-${i}`}
+                            className={`h-1.5 w-1.5 rounded-full ${KIND_META[e.kind]?.dot ?? "bg-slate-400"}`}
+                          />
+                        ))}
+                      </span>
+                    )}
+                    {others.length > 3 && (
+                      <span className="text-[9px] text-slate-400">+{others.length - 3}</span>
                     )}
                   </button>
                 );
@@ -230,13 +261,23 @@ export default function KalenderPage() {
           </Card>
 
           {/* Legenda */}
-          <div className="flex flex-wrap gap-3 px-1 text-xs text-slate-600">
-            {(Object.keys(KIND_META) as CalEvent["kind"][]).map((k) => (
-              <span key={k} className="flex items-center gap-1.5">
-                <span className={`h-2.5 w-2.5 rounded-full ${KIND_META[k].dot}`} />
-                {KIND_META[k].label}
-              </span>
-            ))}
+          <div className="space-y-2 px-1 text-xs text-slate-600">
+            <div className="flex flex-wrap gap-3">
+              {(["leave", "off", "holiday"] as CalEvent["kind"][]).map((k) => (
+                <span key={k} className="flex items-center gap-1.5">
+                  <span className={`h-2.5 w-2.5 rounded-full ${KIND_META[k].dot}`} />
+                  {KIND_META[k].label}
+                </span>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {SHIFT_CATEGORY_ORDER.map((c) => (
+                <span key={c} className="flex items-center gap-1.5">
+                  <span className={`h-3 w-3 rounded ${SHIFT_DOT[c]}`} />
+                  {SHIFT_LABEL[c]}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Event hari terpilih */}
@@ -255,8 +296,9 @@ export default function KalenderPage() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-900">{e.title}</p>
                         <p className="text-xs text-slate-500">
-                          {[e.employeeName, e.teamCode, e.leaveType].filter(Boolean).join(" · ") ||
-                            e.kind}
+                          {e.kind === "shift"
+                            ? `Regu ${e.teamCode ?? "-"}`
+                            : [e.employeeName, e.teamCode, e.leaveType].filter(Boolean).join(" · ") || e.kind}
                         </p>
                       </div>
                       <span

@@ -1,138 +1,395 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Card, Spinner, EmptyState, PageHeader, ErrorBox, Input, Field, Select } from "@/components/ui";
 import { formatID, toISODateInput } from "@/lib/dates-client";
+import { SHIFT_CELL, SHIFT_CATEGORY_ORDER, SHIFT_DOT, SHIFT_LABEL, shiftCategory } from "@/lib/shift-colors";
 
-interface Roster { id: number; date: string; team: { code: string; name: string }; shiftType: { code: string; name: string } }
-interface Off { id: number; date: string; kind: string; employee: { name: string; nik: string; team: { name: string } } }
-interface Team { id: number; code: string; name: string }
+interface Roster {
+  id: string;
+  date: string;
+  team: { id: number; code: string; name: string };
+  shiftType: { code: string; name: string; startTime: string | null; endTime: string | null };
+}
+interface Team {
+  id: number;
+  code: string;
+  name: string;
+}
+interface EmployeeRow {
+  id: number;
+  name: string;
+  nik: string;
+  team: string | null;
+  offDayOfWeek: number | null;
+}
+interface ShiftTypeOption {
+  id: number;
+  code: string;
+  name: string;
+  patterns: { dayOfWeek: number; startTime: string; endTime: string }[];
+}
+interface RotationConfig {
+  mode: "WEEKLY" | "FIXED";
+  order: string[];
+  weekStart: string;
+  anchorDate: string;
+  anchorMap: Record<string, string>;
+}
+
+const DAY_OPTIONS = ["SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU", "MINGGU"];
+const DOW_SHORT = ["Mg", "Sn", "Sl", "Rb", "Km", "Jm", "Sb"];
+const DOW_FULL = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
+function compactHours(start: string | null, end: string | null): string {
+  if (!start || !end) return "";
+  return `${start.slice(0, 2)}–${end.slice(0, 2)}`;
+}
+
+function monthDays(month: string): string[] {
+  const [y, m] = month.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const out: string[] = [];
+  for (let d = 1; d <= last; d++) out.push(`${month}-${String(d).padStart(2, "0")}`);
+  return out;
+}
 
 export default function ShiftOffPage() {
   const [tab, setTab] = useState<"roster" | "off">("roster");
   const [rosters, setRosters] = useState<Roster[]>([]);
-  const [offs, setOffs] = useState<Off[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const [shiftTypes, setShiftTypes] = useState<ShiftTypeOption[]>([]);
+  const [rotation, setRotation] = useState<RotationConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [month, setMonth] = useState(() => toISODateInput(new Date()).slice(0, 7));
-  const [offDate, setOffDate] = useState(toISODateInput(new Date()));
+  const [savingConfig, setSavingConfig] = useState(false);
 
-  async function load() {
+  const monthRange = useMemo(() => {
+    const [y, m] = month.split("-").map(Number);
+    const from = `${month}-01`;
+    const to = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    return { from, to };
+  }, [month]);
+
+  const loadMonth = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [y, m] = month.split("-").map(Number);
-      const from = `${month}-01`;
-      const to = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
-      const [rr, oo, tt] = await Promise.all([
-        fetch(`/api/shifts/rosters?from=${from}&to=${to}`).then((r) => r.json()),
-        fetch(`/api/off?from=${from}&to=${to}`).then((r) => r.json()),
-        fetch(`/api/org/teams`).then((r) => r.json()).catch(() => ({ ok: false })),
-      ]);
+      const rr = await fetch(`/api/shifts/rosters?from=${monthRange.from}&to=${monthRange.to}`).then((r) => r.json());
       if (!rr.ok) throw new Error(rr.error.message);
-      if (!oo.ok) throw new Error(oo.error.message);
       setRosters(rr.data.rosters);
-      setOffs(oo.data.items);
-      if (tt.ok) setTeams(tt.data.items ?? tt.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memuat.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [monthRange.from, monthRange.to]);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+    (async () => {
+      try {
+        const [tRes, rotRes, empRes] = await Promise.all([
+          fetch("/api/org/teams").then((r) => r.json()).catch(() => ({ ok: false })),
+          fetch("/api/shifts/rotation").then((r) => r.json()).catch(() => ({ ok: false })),
+          fetch("/api/employees?status=ACTIVE&limit=200").then((r) => r.json()).catch(() => ({ ok: false })),
+        ]);
+        if (tRes.ok) setTeams(tRes.data.items ?? tRes.data);
+        if (rotRes.ok) {
+          setRotation(rotRes.data.config);
+          setShiftTypes(rotRes.data.shiftTypes);
+        }
+        if (empRes.ok) setEmployees(empRes.data.items);
+      } catch {
+        /* abaikan */
+      }
+    })();
+  }, []);
 
-  async function generate() {
+  useEffect(() => {
+    loadMonth();
+  }, [loadMonth]);
+
+  const days = useMemo(() => monthDays(month), [month]);
+
+  const rosterCells = useMemo(() => {
+    const map = new Map<string, Roster>();
+    for (const r of rosters) map.set(`${r.team.code}|${r.date.slice(0, 10)}`, r);
+    return map;
+  }, [rosters]);
+
+  const gridTeams = useMemo(() => {
+    const present = new Map<string, Team>();
+    for (const r of rosters) present.set(r.team.code, { id: r.team.id, code: r.team.code, name: r.team.name });
+    for (const t of teams) if (rotation && t.code in rotation.anchorMap) present.set(t.code, t);
+    return [...present.values()];
+  }, [teams, rosters, rotation]);
+
+  async function persistRotation(): Promise<boolean> {
+    if (!rotation) return false;
+    const anchorMap = Object.fromEntries(Object.entries(rotation.anchorMap).filter(([, v]) => !!v));
+    const res = await fetch("/api/shifts/rotation", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...rotation, anchorMap }),
+    });
+    const j = await res.json();
+    if (!j.ok) {
+      setError(j.error.message);
+      return false;
+    }
+    setRotation(j.data.config);
+    return true;
+  }
+
+  async function saveRotation() {
+    setSavingConfig(true);
     setError("");
     setSuccess("");
-    const [y, m] = month.split("-").map(Number);
-    const from = `${month}-01`;
-    const to = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
     try {
-      const r = await fetch("/api/shifts/rosters/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ from, to }),
-      });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error.message);
-      setSuccess(`Roster dibuat: ${j.data.created} baris.`);
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal generate.");
+      if (await persistRotation()) {
+        setSuccess("Pola rotasi disimpan. Jadwal shift langsung berlaku untuk semua tanggal.");
+        await loadMonth();
+      }
+    } finally {
+      setSavingConfig(false);
     }
   }
 
-  async function ajukanOff() {
-    setError("");
-    setSuccess("");
-    try {
-      const r = await fetch("/api/off", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: offDate }),
-      });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error.message);
-      const warns = (j.data.warnings ?? []).join(" ");
-      setSuccess(`OFF ${formatID(offDate)} tercatat. ${warns}`);
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal.");
-    }
-  }
+  const monthLabel = new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${month}-01T00:00:00Z`));
 
   return (
     <div>
-      <PageHeader title="Shift & OFF" subtitle="Jadwal shift regu dan OFF individu" />
+      <PageHeader title="Shift & OFF" subtitle="Pola rotasi shift regu dan hari OFF tetap karyawan" />
       {error && <div className="mb-3"><ErrorBox message={error} /></div>}
-      {success && <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">{success}</div>}
+      {success && (
+        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+          {success}
+        </div>
+      )}
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {(["roster", "off"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === t ? "bg-emerald-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+              tab === t ? "bg-emerald-600 text-white" : "border border-slate-200 bg-white text-slate-600"
+            }`}
           >
-            {t === "roster" ? "Jadwal Shift" : "OFF Individu"}
+            {t === "roster" ? "Jadwal Shift" : "Hari OFF"}
           </button>
         ))}
-        <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="ml-auto w-44" />
+        {tab === "roster" && (
+          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="ml-auto w-44" />
+        )}
       </div>
 
-      {loading ? (
+      {loading && tab === "roster" ? (
         <Spinner />
       ) : tab === "roster" ? (
-        <Card>
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Rotasi 3 regu × 3 shift. Rabu = OFF bersama.</p>
-            <Button variant="secondary" onClick={generate}>Generate Otomatis</Button>
-          </div>
-          {rosters.length === 0 ? (
-            <EmptyState title="Belum ada roster" hint="Klik Generate Otomatis untuk membuat jadwal." />
+        <div className="space-y-4">
+          {rotation && (
+            <Card
+              title="Pola Rotasi Shift"
+              description="Atur acuan minggu ini. Jadwal otomatis berlaku untuk semua tanggal (tidak perlu generate per bulan)."
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Field label="Mode">
+                  <Select
+                    value={rotation.mode}
+                    onChange={(e) =>
+                      setRotation({ ...rotation, mode: e.target.value as RotationConfig["mode"] })
+                    }
+                  >
+                    <option value="WEEKLY">Rotasi Mingguan</option>
+                    <option value="FIXED">Tetap (tidak berotasi)</option>
+                  </Select>
+                </Field>
+                <Field label="Awal Minggu">
+                  <Select
+                    value={rotation.weekStart}
+                    onChange={(e) => setRotation({ ...rotation, weekStart: e.target.value })}
+                  >
+                    {DAY_OPTIONS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Tanggal Acuan (awal minggu)">
+                  <Input
+                    type="date"
+                    value={rotation.anchorDate}
+                    onChange={(e) => setRotation({ ...rotation, anchorDate: e.target.value })}
+                  />
+                </Field>
+              </div>
+
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Shift pada minggu acuan
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {teams
+                    .filter((t) => t.code !== "LABORATORIUM")
+                    .map((t) => (
+                      <Field key={t.id} label={t.name}>
+                        <Select
+                          value={rotation.anchorMap[t.code] ?? ""}
+                          onChange={(e) =>
+                            setRotation({
+                              ...rotation,
+                              anchorMap: { ...rotation.anchorMap, [t.code]: e.target.value },
+                            })
+                          }
+                        >
+                          <option value="">— Tidak dijadwalkan —</option>
+                          {shiftTypes.map((s) => (
+                            <option key={s.id} value={s.code}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    ))}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <Button onClick={saveRotation} disabled={savingConfig}>
+                  {savingConfig ? "Menyimpan…" : "Simpan Pola"}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          <Card title={`Jadwal Shift ${monthLabel}`} description="Highlight penuh sesuai kategori shift.">
+            {gridTeams.length === 0 ? (
+              <EmptyState title="Belum ada jadwal" hint="Atur pola rotasi di atas." icon="🕐" />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-semibold text-slate-500">
+                        Regu
+                      </th>
+                      {days.map((iso) => {
+                        const dow = new Date(`${iso}T00:00:00Z`).getUTCDay();
+                        const isWed = dow === 3;
+                        return (
+                          <th
+                            key={iso}
+                            className={`min-w-[40px] px-1 py-1 text-center font-medium ${
+                              isWed ? "bg-slate-100 text-slate-500" : "text-slate-500"
+                            }`}
+                            title={`${DOW_FULL[dow]}, ${formatID(iso)}`}
+                          >
+                            <div>{Number(iso.slice(8, 10))}</div>
+                            <div className="text-[9px] font-normal text-slate-400">{DOW_SHORT[dow]}</div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gridTeams.map((t) => (
+                      <tr key={t.id} className="border-t border-slate-100">
+                        <td className="sticky left-0 z-10 whitespace-nowrap bg-white px-2 py-1.5 font-medium text-slate-700">
+                          {t.name}
+                        </td>
+                        {days.map((iso) => {
+                          const dow = new Date(`${iso}T00:00:00Z`).getUTCDay();
+                          const r = rosterCells.get(`${t.code}|${iso}`);
+                          const cat = r
+                            ? shiftCategory({
+                                code: r.shiftType.code,
+                                dayOfWeek: dow,
+                                startTime: r.shiftType.startTime,
+                                endTime: r.shiftType.endTime,
+                              })
+                            : dow === 3
+                              ? "OFF"
+                              : null;
+                          return (
+                            <td key={iso} className="p-0.5 align-middle">
+                              {cat ? (
+                                <div
+                                  className={`flex min-h-[36px] flex-col items-center justify-center rounded px-0.5 py-1 text-[10px] font-bold leading-tight ${SHIFT_CELL[cat]}`}
+                                  title={
+                                    r
+                                      ? `${r.shiftType.name} ${r.shiftType.startTime ?? ""}–${r.shiftType.endTime ?? ""}`
+                                      : "OFF"
+                                  }
+                                >
+                                  <span>{r ? r.shiftType.code.slice(0, 3) : "OFF"}</span>
+                                  {r?.shiftType.startTime && (
+                                    <span className="text-[8px] font-normal">
+                                      {compactHours(r.shiftType.startTime, r.shiftType.endTime)}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="min-h-[36px]" />
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-600">
+              {SHIFT_CATEGORY_ORDER.map((c) => (
+                <span key={c} className="flex items-center gap-1.5">
+                  <span className={`h-3 w-3 rounded ${SHIFT_DOT[c]}`} />
+                  {SHIFT_LABEL[c]}
+                </span>
+              ))}
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <Card title="Hari OFF Karyawan" description="Hari OFF mingguan tetap (ketetapan). Rabu = OFF bersama.">
+          {employees.length === 0 ? (
+            <EmptyState title="Belum ada data karyawan" icon="🌴" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-xs uppercase text-slate-500">
-                    <th className="py-2">Tanggal</th>
-                    <th>Regu</th>
-                    <th>Shift</th>
+                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                    <th className="px-3 py-2">Karyawan</th>
+                    <th className="px-3 py-2">Regu</th>
+                    <th className="px-3 py-2">Hari OFF</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rosters.map((r) => (
-                    <tr key={r.id} className="border-b last:border-0">
-                      <td className="py-2">{formatID(r.date)}</td>
-                      <td>{r.team.name}</td>
-                      <td><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold">{r.shiftType.name}</span></td>
+                  {employees.map((e) => (
+                    <tr key={e.id} className="border-b border-slate-100 last:border-0">
+                      <td className="px-3 py-2">
+                        <span className="font-medium text-slate-900">{e.name}</span>
+                        <span className="ml-1 font-mono text-xs text-slate-400">{e.nik}</span>
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">{e.team ?? "-"}</td>
+                      <td className="px-3 py-2">
+                        {e.offDayOfWeek == null ? (
+                          <span className="text-slate-400">Belum diatur</span>
+                        ) : (
+                          <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                            {DOW_FULL[e.offDayOfWeek]}
+                          </span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -140,42 +397,6 @@ export default function ShiftOffPage() {
             </div>
           )}
         </Card>
-      ) : (
-        <div className="space-y-4">
-          <Card>
-            <div className="flex flex-wrap items-end gap-3">
-              <Field label="Tanggal OFF (Kam–Sel, bukan Rabu)">
-                <Input type="date" value={offDate} onChange={(e) => setOffDate(e.target.value)} />
-              </Field>
-              <Button onClick={ajukanOff}>Ajukan OFF</Button>
-            </div>
-            <p className="mt-2 text-xs text-slate-500">Maksimal 1x OFF individu per minggu. {teams.length > 0 && `Regu: ${teams.map((t) => t.name).join(", ")}`}</p>
-          </Card>
-          <Card>
-            {offs.length === 0 ? (
-              <EmptyState title="Belum ada OFF" hint="Belum ada jadwal OFF pada periode ini." />
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs uppercase text-slate-500">
-                    <th className="py-2">Tanggal</th>
-                    <th>Karyawan</th>
-                    <th>Regu</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {offs.map((o) => (
-                    <tr key={o.id} className="border-b last:border-0">
-                      <td className="py-2">{formatID(o.date)}</td>
-                      <td>{o.employee.name}</td>
-                      <td>{o.employee.team.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Card>
-        </div>
       )}
     </div>
   );

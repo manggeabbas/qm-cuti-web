@@ -54,12 +54,16 @@ export async function POST(req: Request) {
   try {
     const user = await requireUser();
     const body = createSchema.parse(await req.json());
+    const privileged = hasRole(user, "ADMIN", "FOREMAN", "WAFOR", "SPV");
     let employeeId = body.employeeId;
 
-    if (!hasRole(user, "ADMIN", "FOREMAN", "WAFOR", "SPV")) {
+    if (!privileged) {
       // karyawan hanya untuk diri sendiri
       if (!user.employeeId) throw new ApiError("FORBIDDEN", "Akun Anda tidak terhubung ke data karyawan.", 403);
       employeeId = user.employeeId;
+    } else if (employeeId == null) {
+      // admin/approver yang tidak memilih karyawan lain -> OFF untuk dirinya sendiri
+      employeeId = user.employeeId ?? undefined;
     }
     if (!employeeId) throw new ApiError("VALIDATION_ERROR", "employeeId wajib diisi.", 422);
 
