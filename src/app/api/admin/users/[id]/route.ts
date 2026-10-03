@@ -144,9 +144,10 @@ export async function PUT(
       }
     }
 
-    // 2) Reset password
+    // 2) Reset password — user wajib ganti lagi saat login berikutnya
     if (body.newPassword) {
       data.passwordHash = await hashPassword(body.newPassword);
+      data.onboardingCompleted = false;
       await auditLog({
         userId: user.id,
         action: "RESET_PASSWORD",

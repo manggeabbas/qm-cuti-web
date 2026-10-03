@@ -13,6 +13,7 @@ export type SessionUser = {
   username: string;
   roles: RoleName[];
   employeeId: number | null;
+  onboardingCompleted: boolean;
   employee: {
     id: number;
     nik: string;
@@ -87,6 +88,7 @@ async function loadUser(userId: number): Promise<SessionUser | null> {
     username: u.username,
     roles: u.roles.map((r) => r.role.name),
     employeeId: u.employeeId,
+    onboardingCompleted: u.onboardingCompleted,
     employee: u.employee
       ? {
           id: u.employee.id,

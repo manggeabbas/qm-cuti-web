@@ -29,6 +29,11 @@ enum EmployeeStatus {
   RESIGNED
 }
 
+enum Gender {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
 enum LeaveCategory {
   CFV
   CT
@@ -163,6 +168,8 @@ model User {
   employee     Employee?              @relation(fields: [employeeId], references: [id])
   isActive     Boolean                @default(true)
   lastLoginAt  DateTime?
+  // false = wajib lengkapi data diri + ganti password saat login (onboarding)
+  onboardingCompleted Boolean @default(true)
   roles        UserRole[]
   sessions     UserSession[]
   auditLogs    AuditLog[]
@@ -277,6 +284,7 @@ model Employee {
   id                Int                       @id @default(autoincrement())
   nik               String                    @unique
   name              String
+  gender            Gender?
   effectiveDate     DateTime                  @db.Date // tanggal efektif bekerja
   positionId        Int
   position          Position                  @relation(fields: [positionId], references: [id])

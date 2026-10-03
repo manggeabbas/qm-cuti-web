@@ -130,6 +130,8 @@ export async function POST(req: Request) {
             username: body.username,
             passwordHash,
             employeeId: body.employeeId ?? null,
+            // user baru wajib lengkapi data diri + ganti password saat login pertama
+            onboardingCompleted: false,
           },
         });
         await tx.userRole.create({

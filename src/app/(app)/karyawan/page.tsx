@@ -49,6 +49,7 @@ interface Employee {
   supervisor: { id: number; nik: string; name: string } | null;
   email: string | null;
   phone: string | null;
+  gender: "LAKI_LAKI" | "PEREMPUAN" | null;
   status: "ACTIVE" | "INACTIVE" | "RESIGNED";
 }
 
@@ -90,6 +91,7 @@ function ShiftToday({ shift }: { shift: Employee["shiftToday"] }) {
 const EMPTY_FORM = {
   nik: "",
   name: "",
+  gender: "",
   effectiveDate: "",
   positionId: "",
   level: "",
@@ -222,6 +224,7 @@ export default function KaryawanPage() {
       supervisorId: e.supervisorId ? String(e.supervisorId) : "",
       email: e.email ?? "",
       phone: e.phone ?? "",
+      gender: e.gender ?? "",
       status: e.status,
     });
     setFormError("");
@@ -240,6 +243,7 @@ export default function KaryawanPage() {
       const body = {
         nik: form.nik.trim(),
         name: form.name.trim(),
+        gender: form.gender || null,
         effectiveDate: form.effectiveDate,
         positionId: Number(form.positionId),
         level: form.level.trim() || null,
@@ -407,6 +411,13 @@ export default function KaryawanPage() {
             </Field>
             <Field label="Nama" required>
               <Input value={form.name} onChange={(e) => set("name", e.target.value)} />
+            </Field>
+            <Field label="Jenis Kelamin" required>
+              <Select value={form.gender} onChange={(e) => set("gender", e.target.value)}>
+                <option value="">— Pilih —</option>
+                <option value="LAKI_LAKI">Laki-laki</option>
+                <option value="PEREMPUAN">Perempuan</option>
+              </Select>
             </Field>
             <Field label="Tanggal Efektif" required>
               <Input type="date" value={form.effectiveDate} onChange={(e) => set("effectiveDate", e.target.value)} />

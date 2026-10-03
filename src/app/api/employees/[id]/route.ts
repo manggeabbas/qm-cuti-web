@@ -98,6 +98,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     const data: Prisma.EmployeeUncheckedUpdateInput = {};
     if (body.nik !== undefined) data.nik = body.nik;
     if (body.name !== undefined) data.name = body.name;
+    if (body.gender !== undefined) data.gender = body.gender;
     if (effectiveDate !== undefined) data.effectiveDate = effectiveDate;
     if (body.positionId !== undefined) data.positionId = body.positionId;
     if (body.level !== undefined) data.level = body.level;

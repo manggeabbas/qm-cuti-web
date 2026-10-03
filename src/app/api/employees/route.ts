@@ -138,6 +138,7 @@ export const createEmployeeSchema = z.object({
     .trim()
     .regex(/^\d{8}$/, "NIK harus tepat 8 digit angka."),
   name: z.string().trim().min(1, "Nama wajib diisi."),
+  gender: z.enum(["LAKI_LAKI", "PEREMPUAN"]).nullish(),
   effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal YYYY-MM-DD."),
   positionId: z.number().int(),
   level: z.string().trim().nullish(),
@@ -189,6 +190,7 @@ export async function POST(req: Request) {
       data: {
         nik: body.nik,
         name: body.name,
+        gender: body.gender ?? null,
         effectiveDate,
         positionId: body.positionId,
         level: body.level ?? null,
