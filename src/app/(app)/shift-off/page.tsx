@@ -356,6 +356,9 @@ export default function ShiftOffPage() {
                                   }
                                 >
                                   <span>{r ? r.shiftType.code.slice(0, 3) : "OFF"}</span>
+                                  {(cat === "OPERSHIFT_PAGI" || cat === "OPERSHIFT_MALAM") && (
+                                    <span className="rounded bg-black/25 px-1 text-[8px]">12J</span>
+                                  )}
                                   {r?.shiftType.startTime && (
                                     <span className="text-[8px] font-normal">
                                       {compactHours(r.shiftType.startTime, r.shiftType.endTime)}

@@ -37,23 +37,23 @@ export function shiftCategory(s: ShiftLike): ShiftCategory | null {
   return null;
 }
 
-/** Kelas Tailwind untuk highlight penuh sel/kartu. */
+/** Kelas Tailwind untuk highlight penuh sel/kartu — palet kontras tinggi. */
 export const SHIFT_CELL: Record<ShiftCategory, string> = {
-  PAGI: "bg-amber-100 text-amber-900",
-  SORE: "bg-sky-100 text-sky-900",
-  MALAM: "bg-indigo-100 text-indigo-900",
-  OPERSHIFT_PAGI: "bg-orange-300 text-orange-950",
-  OPERSHIFT_MALAM: "bg-purple-300 text-purple-950",
-  OFF: "bg-slate-100 text-slate-400",
+  PAGI: "bg-amber-300 text-amber-950",
+  SORE: "bg-cyan-400 text-cyan-950",
+  MALAM: "bg-indigo-600 text-white",
+  OPERSHIFT_PAGI: "bg-orange-500 text-white",
+  OPERSHIFT_MALAM: "bg-pink-600 text-white",
+  OFF: "bg-slate-200 text-slate-500",
 };
 
 /** Kelas titik untuk legenda. */
 export const SHIFT_DOT: Record<ShiftCategory, string> = {
   PAGI: "bg-amber-400",
-  SORE: "bg-sky-400",
-  MALAM: "bg-indigo-400",
+  SORE: "bg-cyan-500",
+  MALAM: "bg-indigo-600",
   OPERSHIFT_PAGI: "bg-orange-500",
-  OPERSHIFT_MALAM: "bg-purple-500",
+  OPERSHIFT_MALAM: "bg-pink-600",
   OFF: "bg-slate-300",
 };
 
@@ -61,8 +61,8 @@ export const SHIFT_LABEL: Record<ShiftCategory, string> = {
   PAGI: "Pagi",
   SORE: "Sore",
   MALAM: "Malam",
-  OPERSHIFT_PAGI: "Opershift Pagi",
-  OPERSHIFT_MALAM: "Opershift Malam",
+  OPERSHIFT_PAGI: "Opershift Pagi (12J)",
+  OPERSHIFT_MALAM: "Opershift Malam (12J)",
   OFF: "OFF",
 };
 

@@ -368,7 +368,12 @@ export default function KalenderPage() {
                   >
                     <span className="font-semibold">{dayNum}</span>
                     {inMonth && (ownOff || soleShift || dow === 3) && (
-                      <span className="text-[9px] font-bold">{ownOff ? "OFF" : soleShift ? soleShift.shiftCode : "OFF"}</span>
+                      <span className="text-[9px] font-bold">
+                        {ownOff ? "OFF" : soleShift ? soleShift.shiftCode : "OFF"}
+                        {(cat === "OPERSHIFT_PAGI" || cat === "OPERSHIFT_MALAM") && (
+                          <span className="ml-0.5 rounded bg-black/25 px-1 text-[8px]">12J</span>
+                        )}
+                      </span>
                     )}
                     {others.length > 0 && (
                       <span className="mt-0.5 flex gap-0.5">
