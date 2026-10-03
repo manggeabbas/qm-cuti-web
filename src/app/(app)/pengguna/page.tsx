@@ -10,9 +10,9 @@ import {
   Badge,
   PageHeader,
   Spinner,
-  EmptyState,
   ErrorBox,
 } from "@/components/ui";
+import DataTable from "@/components/DataTable";
 import Modal from "@/components/Modal";
 import Pager from "@/components/Pager";
 import { api, Paged } from "@/lib/client-api";
@@ -217,55 +217,59 @@ export default function PenggunaPage() {
       <ErrorBox message={error} />
       {loading ? (
         <Spinner />
-      ) : items.length === 0 ? (
-        <EmptyState title="Belum ada pengguna" />
       ) : (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full min-w-[680px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <th className="px-4 py-3">Username</th>
-                <th className="px-4 py-3">Karyawan</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Login Terakhir</th>
-                <th className="px-4 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((u) => (
-                <tr key={u.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs font-medium">{u.username}</td>
-                  <td className="px-4 py-3">{u.employee ? `${u.employee.name} (${u.employee.nik})` : "-"}</td>
-                  <td className="px-4 py-3">{u.roles.map(roleLabel).join(", ")}</td>
-                  <td className="px-4 py-3">
-                    <Badge status={u.isActive ? "ACTIVE" : "INACTIVE"} label={u.isActive ? "Aktif" : "Nonaktif"} />
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">
-                    {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("id-ID") : "-"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => openRoleModal(u)} className="px-3 py-1.5 text-xs">
-                        Role
-                      </Button>
-                      <Button variant="secondary" onClick={() => openPwModal(u)} className="px-3 py-1.5 text-xs">
-                        Reset PW
-                      </Button>
-                      <Button
-                        variant={u.isActive ? "danger" : "secondary"}
-                        onClick={() => toggleActive(u)}
-                        className="px-3 py-1.5 text-xs"
-                      >
-                        {u.isActive ? "Nonaktifkan" : "Aktifkan"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <DataTable
+          rows={items}
+          rowKey={(u) => u.id}
+          emptyTitle="Belum ada pengguna"
+          emptyIcon="🔑"
+          columns={[
+            {
+              key: "username",
+              header: "Username",
+              render: (u) => <span className="font-mono text-xs font-medium">{u.username}</span>,
+            },
+            {
+              key: "employee",
+              header: "Karyawan",
+              render: (u) => (u.employee ? `${u.employee.name} (${u.employee.nik})` : "-"),
+            },
+            { key: "roles", header: "Role", render: (u) => u.roles.map(roleLabel).join(", ") },
+            {
+              key: "status",
+              header: "Status",
+              hideOnMobile: true,
+              render: (u) => <Badge status={u.isActive ? "ACTIVE" : "INACTIVE"} label={u.isActive ? "Aktif" : "Nonaktif"} />,
+            },
+            {
+              key: "lastLogin",
+              header: "Login Terakhir",
+              hideOnMobile: true,
+              render: (u) => (
+                <span className="text-xs text-slate-500">
+                  {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("id-ID") : "-"}
+                </span>
+              ),
+            },
+          ]}
+          actions={(u) => (
+            <>
+              <Button size="sm" variant="outline" onClick={() => openRoleModal(u)}>
+                Role
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openPwModal(u)}>
+                Reset PW
+              </Button>
+              <Button
+                size="sm"
+                variant={u.isActive ? "danger" : "secondary"}
+                onClick={() => toggleActive(u)}
+              >
+                {u.isActive ? "Nonaktifkan" : "Aktifkan"}
+              </Button>
+            </>
+          )}
+        />
       )}
       <Pager page={page} totalPages={totalPages} onPage={setPage} />
 

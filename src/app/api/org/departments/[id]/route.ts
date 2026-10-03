@@ -13,7 +13,7 @@ const updateDepartmentSchema = createDepartmentSchema
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const includeParent = { division: { select: { id: true, code: true, name: true } } } as const;
+const includeParent = { company: { select: { id: true, code: true, name: true } } } as const;
 
 /** GET /api/org/departments/[id] */
 export async function GET(req: Request, ctx: Ctx) {
@@ -25,7 +25,7 @@ export async function GET(req: Request, ctx: Ctx) {
       include: includeParent,
     });
     if (!row) return fail("NOT_FOUND", "Departemen tidak ditemukan.", 404);
-    return ok(mapDepartment(row, row.division));
+    return ok(mapDepartment(row, row.company));
   } catch (e) {
     return toErrorResponse(e);
   }
@@ -44,8 +44,8 @@ export async function PUT(req: Request, ctx: Ctx) {
     if (!existing) return fail("NOT_FOUND", "Departemen tidak ditemukan.", 404);
 
     if (body.parentId !== undefined) {
-      const parent = await db.division.findUnique({ where: { id: body.parentId } });
-      if (!parent) return fail("INVALID_INPUT", "Divisi induk tidak ditemukan.", 400);
+      const parent = await db.company.findUnique({ where: { id: body.parentId } });
+      if (!parent) return fail("INVALID_INPUT", "Perusahaan induk tidak ditemukan.", 400);
     }
 
     const updated = await db.department.update({
@@ -53,7 +53,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       data: {
         ...(body.code !== undefined ? { code: body.code } : {}),
         ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.parentId !== undefined ? { divisionId: body.parentId } : {}),
+        ...(body.parentId !== undefined ? { companyId: body.parentId } : {}),
         ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
       },
       include: includeParent,
@@ -64,11 +64,11 @@ export async function PUT(req: Request, ctx: Ctx) {
       action: "UPDATE_DEPARTMENT",
       entityType: "Department",
       entityId: deptId,
-      oldValue: mapDepartment(existing, existing.division),
-      newValue: mapDepartment(updated, updated.division),
+      oldValue: mapDepartment(existing, existing.company),
+      newValue: mapDepartment(updated, updated.company),
       ...getRequestMeta(req),
     });
-    return ok(mapDepartment(updated, updated.division));
+    return ok(mapDepartment(updated, updated.company));
   } catch (e) {
     if (e instanceof z.ZodError) {
       return fail("VALIDATION_ERROR", e.issues[0]?.message ?? "Input tidak valid.", 422);
@@ -91,11 +91,11 @@ export async function DELETE(req: Request, ctx: Ctx) {
     const existing = await db.department.findUnique({ where: { id: deptId }, include: includeParent });
     if (!existing) return fail("NOT_FOUND", "Departemen tidak ditemukan.", 404);
 
-    const [sectionCount, empCount] = await Promise.all([
-      db.section.count({ where: { departmentId: deptId } }),
+    const [divisionCount, empCount] = await Promise.all([
+      db.division.count({ where: { departmentId: deptId } }),
       db.employee.count({ where: { departmentId: deptId } }),
     ]);
-    if (sectionCount > 0 || empCount > 0) {
+    if (divisionCount > 0 || empCount > 0) {
       return fail("IN_USE", "Tidak dapat dihapus karena masih digunakan.", 409);
     }
 
@@ -106,7 +106,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
       action: "DELETE_DEPARTMENT",
       entityType: "Department",
       entityId: deptId,
-      oldValue: mapDepartment(existing, existing.division),
+      oldValue: mapDepartment(existing, existing.company),
       ...getRequestMeta(req),
     });
     return ok({ message: "Departemen dihapus." });

@@ -109,6 +109,8 @@ export async function PUT(req: Request, ctx: Ctx) {
     if (body.email !== undefined) data.email = body.email;
     if (body.phone !== undefined) data.phone = body.phone;
     if (body.status !== undefined) data.status = body.status;
+    if (body.offLocked !== undefined) data.offLocked = body.offLocked;
+    if (body.offDayOfWeek !== undefined) data.offDayOfWeek = body.offDayOfWeek;
 
     const updated = await db.employee.update({
       where: { id: empId },

@@ -195,12 +195,11 @@ model UserSession {
 
 // ---------------- Struktur Organisasi ----------------
 
-model Division {
+model Company {
   id          Int          @id @default(autoincrement())
   code        String       @unique
   name        String
   departments Department[]
-  employees   Employee[]
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -208,28 +207,41 @@ model Division {
 
 model Department {
   id         Int        @id @default(autoincrement())
-  divisionId Int
-  division   Division   @relation(fields: [divisionId], references: [id])
+  companyId  Int
+  company    Company    @relation(fields: [companyId], references: [id])
   code       String     @unique
   name       String
-  sections   Section[]
+  divisions  Division[]
   employees  Employee[]
   isActive   Boolean    @default(true)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 }
 
-model Section {
+model Division {
   id           Int        @id @default(autoincrement())
   departmentId Int
   department   Department @relation(fields: [departmentId], references: [id])
   code         String     @unique
   name         String
-  teams        Team[]
+  sections     Section[]
   employees    Employee[]
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+}
+
+model Section {
+  id         Int       @id @default(autoincrement())
+  divisionId Int
+  division   Division  @relation(fields: [divisionId], references: [id])
+  code       String    @unique
+  name       String
+  teams      Team[]
+  employees  Employee[]
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Team {
@@ -284,6 +296,7 @@ model Employee {
   phone             String?
   status            EmployeeStatus            @default(ACTIVE)
   offLocked         Boolean                   @default(false) // OFF dikunci -> perubahan via approval
+  offDayOfWeek      Int? // 0=Minggu..6=Sabtu; hari OFF mingguan tetap (Rabu OFF bersama)
   user              User?
   leaveRequests     LeaveRequest[]
   balanceTxns       LeaveBalanceTransaction[]

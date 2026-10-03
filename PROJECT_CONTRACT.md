@@ -23,7 +23,7 @@ src/
     (app)/approval/page.tsx           # inbox approval (foreman/wafor/koordinator/spv)
     (app)/kalender/page.tsx
     (app)/karyawan/...                # master karyawan (admin, approver read)
-    (app)/organisasi/...              # divisi/departemen/seksi/regu (admin)
+    (app)/organisasi/...              # perusahaan/departemen/divisi/seksi/regu (admin)
     (app)/cuti/...                    # jenis cuti, saldo (admin)
     (app)/shift-off/...               # shift roster + OFF (admin/foreman)
     (app)/laporan/...                 # laporan + export

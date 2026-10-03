@@ -2,11 +2,13 @@ import db from "@/lib/db";
 import { ok, fail, toErrorResponse } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { hasRole } from "@/lib/role-utils";
-import { parseISODate, toISODate } from "@/lib/dates";
+import { dayOfWeek, eachDayOfRange, parseISODate, toISODate } from "@/lib/dates";
+import { buildSchedule } from "@/lib/shifts";
 
 /**
  * GET /api/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD&teamId=&employeeId=&status=
- * Event cuti (approved + pending), OFF, dan hari libur.
+ * Event cuti (approved + pending), OFF mingguan tetap, hari libur, dan shift regu.
+ * Jadwal shift dihitung dari pola rotasi sehingga berlaku untuk tanggal mana pun.
  */
 export async function GET(req: Request) {
   try {
@@ -34,28 +36,46 @@ export async function GET(req: Request) {
       orderBy: { startDate: "asc" },
     });
 
-    const offs = await db.offSchedule.findMany({
-      where: {
-        date: { gte: from, lte: to },
-        ...(teamId ? { employee: { teamId } } : {}),
-        ...(employeeId ? { employeeId } : {}),
-      },
-      include: { employee: { select: { id: true, name: true, team: { select: { code: true } } } } },
-    });
-
     const holidays = await db.holiday.findMany({ where: { date: { gte: from, lte: to } } });
 
-    const rosters = await db.shiftRoster.findMany({
+    // OFF mingguan tetap: karyawan dengan offDayOfWeek menghasilkan OFF tiap minggu.
+    const offEmployees = await db.employee.findMany({
       where: {
-        date: { gte: from, lte: to },
+        status: "ACTIVE",
+        offDayOfWeek: { not: null },
         ...(teamId ? { teamId } : {}),
+        ...(employeeId ? { id: employeeId } : {}),
+        ...(canSeeNames ? {} : { id: user.employee?.id ?? -1 }),
       },
-      include: {
-        team: { select: { code: true, name: true } },
-        shiftType: { select: { code: true, name: true } },
-      },
-      orderBy: [{ date: "asc" }, { team: { code: "asc" } }],
+      select: { id: true, name: true, offDayOfWeek: true, team: { select: { code: true } } },
     });
+    const offEvents: Array<Record<string, unknown>> = [];
+    for (const e of offEmployees) {
+      if (e.offDayOfWeek == null) continue;
+      for (const d of eachDayOfRange(from, to)) {
+        if (dayOfWeek(d) !== e.offDayOfWeek) continue;
+        const mine = user.employeeId === e.id;
+        offEvents.push({
+          id: `off-${e.id}-${toISODate(d)}`,
+          title: canSeeNames || mine ? `OFF — ${e.name}` : "OFF",
+          start: toISODate(d),
+          end: toISODate(d),
+          kind: "off",
+          status: null,
+          employeeName: canSeeNames || mine ? e.name : null,
+          teamCode: e.team.code,
+          leaveType: null,
+        });
+      }
+    }
+
+    // Shift: karyawan hanya melihat regunya sendiri; approver/admin melihat semua
+    // atau difilter dengan teamId. Dihitung dari pola rotasi (berlaku selamanya).
+    let shiftTeamFilter: number | undefined;
+    if (teamId) shiftTeamFilter = teamId;
+    else if (!canSeeNames) shiftTeamFilter = user.employee?.teamId ?? -1;
+
+    const shifts = shiftTeamFilter === -1 ? [] : await buildSchedule(from, to, shiftTeamFilter);
 
     const events = [
       ...leaves.map((l) => {
@@ -72,17 +92,7 @@ export async function GET(req: Request) {
           leaveType: l.leaveType.name,
         };
       }),
-      ...offs.map((o) => ({
-        id: `off-${o.id}`,
-        title: canSeeNames || user.employeeId === o.employee.id ? `OFF — ${o.employee.name}` : "OFF",
-        start: toISODate(o.date),
-        end: toISODate(o.date),
-        kind: "off" as const,
-        status: null as string | null,
-        employeeName: canSeeNames ? o.employee.name : null,
-        teamCode: o.employee.team.code,
-        leaveType: null as string | null,
-      })),
+      ...offEvents.map((o) => ({ ...o, kind: "off" as const })),
       ...holidays.map((h) => ({
         id: `holiday-${h.id}`,
         title: `Libur: ${h.name}`,
@@ -94,19 +104,25 @@ export async function GET(req: Request) {
         teamCode: null as string | null,
         leaveType: null as string | null,
       })),
-      ...rosters.map((r) => ({
-        id: `roster-${r.id}`,
-        title: `${r.team.name} — ${r.shiftType.name}`,
-        start: toISODate(r.date),
-        end: toISODate(r.date),
-        kind: "shift" as const,
-        status: null as string | null,
-        employeeName: null as string | null,
-        teamCode: r.team.code,
-        leaveType: null as string | null,
-        shiftCode: r.shiftType.code,
-        shiftName: r.shiftType.name,
-      })),
+      ...shifts.map((s) => {
+        const isMine = user.employee?.teamId === s.team.id;
+        const showTeam = canSeeNames && !isMine;
+        const hours = ` ${s.shiftType.startTime}–${s.shiftType.endTime}`;
+        return {
+          id: `shift-${s.team.code}-${s.date}`,
+          title: `${s.shiftType.name}${hours}${showTeam ? ` · ${s.team.name}` : ""}`,
+          start: s.date,
+          end: s.date,
+          kind: "shift" as const,
+          status: null as string | null,
+          employeeName: null as string | null,
+          teamCode: s.team.code,
+          leaveType: null as string | null,
+          shiftCode: s.shiftType.code,
+          startTime: s.shiftType.startTime,
+          endTime: s.shiftType.endTime,
+        };
+      }),
     ];
 
     return ok({ events });

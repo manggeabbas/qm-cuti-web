@@ -8,12 +8,15 @@ import { auditLog, getRequestMeta } from "@/lib/audit";
 
 type Parent = { id: number; code: string; name: string } | null;
 
+/** Bentuk respons publik seksi (induk: Divisi). */
 export function mapSection(
   s: { id: number; code: string; name: string; isActive: boolean; createdAt: Date },
   parent: Parent,
 ) {
   return { id: s.id, code: s.code, name: s.name, parent, isActive: s.isActive, createdAt: s.createdAt };
 }
+
+const parentSelect = { select: { id: true, code: true, name: true } } as const;
 
 /** GET /api/org/sections?search=&parentId=&page=&limit= */
 export async function GET(req: Request) {
@@ -36,27 +39,20 @@ export async function GET(req: Request) {
             ],
           }
         : {}),
-      ...(parentId !== undefined ? { departmentId: parentId } : {}),
+      ...(parentId !== undefined ? { divisionId: parentId } : {}),
     };
 
     const [total, rows] = await Promise.all([
       db.section.count({ where }),
       db.section.findMany({
         where,
-        include: { department: { select: { id: true, code: true, name: true } } },
+        include: { division: parentSelect },
         orderBy: { name: "asc" },
         skip,
         take: limit,
       }),
     ]);
-    return ok(
-      paged(
-        rows.map((r) => mapSection(r, r.department)),
-        total,
-        page,
-        limit,
-      ),
-    );
+    return ok(paged(rows.map((r) => mapSection(r, r.division)), total, page, limit));
   } catch (e) {
     return toErrorResponse(e);
   }
@@ -75,12 +71,12 @@ export async function POST(req: Request) {
     requireRole(user, "ADMIN");
     const body = createSectionSchema.parse(await req.json());
 
-    const parent = await db.department.findUnique({ where: { id: body.parentId } });
-    if (!parent) return fail("INVALID_INPUT", "Departemen induk tidak ditemukan.", 400);
+    const parent = await db.division.findUnique({ where: { id: body.parentId } });
+    if (!parent) return fail("INVALID_INPUT", "Divisi induk tidak ditemukan.", 400);
 
     const created = await db.section.create({
-      data: { code: body.code, name: body.name, departmentId: body.parentId },
-      include: { department: { select: { id: true, code: true, name: true } } },
+      data: { code: body.code, name: body.name, divisionId: body.parentId },
+      include: { division: parentSelect },
     });
 
     await auditLog({
@@ -88,10 +84,10 @@ export async function POST(req: Request) {
       action: "CREATE_SECTION",
       entityType: "Section",
       entityId: created.id,
-      newValue: mapSection(created, created.department),
+      newValue: mapSection(created, created.division),
       ...getRequestMeta(req),
     });
-    return ok(mapSection(created, created.department), 201);
+    return ok(mapSection(created, created.division), 201);
   } catch (e) {
     if (e instanceof z.ZodError) {
       return fail("VALIDATION_ERROR", e.issues[0]?.message ?? "Input tidak valid.", 422);

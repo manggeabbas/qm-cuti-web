@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useId } from "react";
 
 /** Modal sederhana mobile-first: bottom-sheet di HP, dialog di desktop. */
 export default function Modal({
@@ -14,6 +14,22 @@ export default function Modal({
   children: React.ReactNode;
   wide?: boolean;
 }) {
+  const titleId = useId();
+
+  // Tutup dengan tombol Escape + kunci scroll latar saat modal terbuka.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
@@ -26,13 +42,16 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900">{title}</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 id={titleId} className="text-base font-bold text-slate-900">
+            {title}
+          </h2>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             ✕
           </button>

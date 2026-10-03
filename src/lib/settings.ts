@@ -33,3 +33,13 @@ export async function getJsonSetting<T>(key: string, fallback: T): Promise<T> {
 export function invalidateSettingsCache(): void {
   cache = null;
 }
+
+/** Simpan satu setting lalu refresh cache. */
+export async function setSetting(key: string, value: string, description?: string): Promise<void> {
+  await db.systemSetting.upsert({
+    where: { key },
+    create: { key, value, description: description ?? null },
+    update: { value },
+  });
+  cache = null;
+}

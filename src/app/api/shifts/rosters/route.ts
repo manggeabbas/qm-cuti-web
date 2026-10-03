@@ -1,13 +1,17 @@
-import { z } from "zod";
-import db from "@/lib/db";
 import { ok, fail, toErrorResponse } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { requireRole } from "@/lib/rbac";
 import { auditLog, getRequestMeta } from "@/lib/audit";
 import { assertPeriodEditable } from "@/lib/shift-periods";
+import { buildSchedule } from "@/lib/shifts";
 import { parseISODate, toISODate } from "@/lib/dates";
+import { z } from "zod";
+import db from "@/lib/db";
 
-/** GET /api/shifts/rosters?from=&to=&teamId= */
+/**
+ * GET /api/shifts/rosters?from=&to=&teamId=
+ * Jadwal shift regu dihitung dari pola rotasi (berlaku untuk tanggal mana pun).
+ */
 export async function GET(req: Request) {
   try {
     await requireUser();
@@ -18,14 +22,19 @@ export async function GET(req: Request) {
     const from = parseISODate(fromStr);
     const to = parseISODate(toStr);
     const teamId = sp.get("teamId") ? Number(sp.get("teamId")) : undefined;
-    const rosters = await db.shiftRoster.findMany({
-      where: { date: { gte: from, lte: to }, ...(teamId ? { teamId } : {}) },
-      include: { team: { select: { code: true, name: true } }, shiftType: { select: { code: true, name: true } } },
-      orderBy: [{ date: "asc" }, { teamId: "asc" }],
-    });
+
+    const schedule = await buildSchedule(from, to, teamId);
     return ok({
-      rosters: rosters.map((r) => ({
-        id: r.id, date: toISODate(r.date), team: r.team, shiftType: r.shiftType,
+      rosters: schedule.map((s) => ({
+        id: `${s.team.code}-${s.date}`,
+        date: s.date,
+        team: { id: s.team.id, code: s.team.code, name: s.team.name },
+        shiftType: {
+          code: s.shiftType.code,
+          name: s.shiftType.name,
+          startTime: s.shiftType.startTime,
+          endTime: s.shiftType.endTime,
+        },
       })),
     });
   } catch (e) {

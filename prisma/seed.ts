@@ -31,6 +31,11 @@ const SETTINGS: [string, string, string][] = [
   ["JABATAN_CONFLICT_SEVERITY", "WARN", "WARN atau ERROR untuk konflik jabatan"],
   ["COUNT_WEEKEND_AS_LEAVE", "true", "Hitung Sabtu/Minggu sebagai hari cuti"],
   ["SHIFT_AUTO_LOCK_LEAD_DAYS", "0", "Auto-lock periode PUBLISHED sekian hari sebelum berjalan (0 = mati)"],
+  ["SHIFT_ROTATION_MODE", "WEEKLY", "Mode rotasi shift (WEEKLY/FIXED)"],
+  ["SHIFT_ROTATION_ORDER", "PAGI,SORE,MALAM", "Urutan rotasi shift"],
+  ["SHIFT_WEEK_START", "KAMIS", "Hari awal minggu rotasi shift"],
+  ["SHIFT_ANCHOR_DATE", "2026-10-01", "Awal minggu acuan rotasi shift"],
+  ["SHIFT_ANCHOR_MAP", '{"REGU_C":"PAGI","REGU_A":"SORE","REGU_B":"MALAM"}', "Regu -> shift pada minggu acuan"],
 ];
 
 const PERMISSIONS: [string, string][] = [
@@ -90,22 +95,31 @@ async function main(): Promise<void> {
     await db.systemSetting.upsert({ where: { key }, create: { key, value, description: desc }, update: { value } });
   }
 
-  // ---- Organisasi ----
-  const division = await db.division.upsert({ where: { code: "QM" }, create: { code: "QM", name: "Quality Management" }, update: {} });
+  // ---- Organisasi: Perusahaan -> Departemen -> Divisi -> Seksi -> Regu ----
+  const company = await db.company.upsert({
+    where: { code: "QM_YWI" },
+    create: { code: "QM_YWI", name: "QM YWI" },
+    update: { name: "QM YWI" },
+  });
   const dept = await db.department.upsert({
     where: { code: "YWI" },
-    create: { code: "YWI", name: "YWI", divisionId: division.id },
-    update: {},
+    create: { code: "YWI", name: "YWI", companyId: company.id },
+    update: { companyId: company.id },
+  });
+  const division = await db.division.upsert({
+    where: { code: "QM" },
+    create: { code: "QM", name: "Quality Management", departmentId: dept.id },
+    update: { departmentId: dept.id },
   });
   const secLap = await db.section.upsert({
     where: { code: "INSPEKSI_LAPANGAN" },
-    create: { code: "INSPEKSI_LAPANGAN", name: "Inspeksi Lapangan", departmentId: dept.id },
-    update: {},
+    create: { code: "INSPEKSI_LAPANGAN", name: "Inspeksi Lapangan", divisionId: division.id },
+    update: { divisionId: division.id },
   });
   const secLab = await db.section.upsert({
     where: { code: "LABORATORIUM" },
-    create: { code: "LABORATORIUM", name: "Laboratorium", departmentId: dept.id },
-    update: {},
+    create: { code: "LABORATORIUM", name: "Laboratorium", divisionId: division.id },
+    update: { divisionId: division.id },
   });
   const teams: Record<string, number> = {};
   for (const [code, name, secId] of [
@@ -176,21 +190,22 @@ async function main(): Promise<void> {
     shiftIds[code] = s.id;
   }
   const patterns: [string, number, string, string][] = [
-    // [shift, dayOfWeek, mulai, selesai]
+    // [shift, dayOfWeek, mulai, selesai]  (0=Min .. 6=Sab)
     ["PAGI", 4, "07:00", "15:00"], ["PAGI", 5, "07:00", "15:00"], ["PAGI", 6, "07:00", "15:00"],
     ["PAGI", 0, "07:00", "15:00"], ["PAGI", 1, "07:00", "15:00"], ["PAGI", 2, "07:00", "15:00"],
-    ["PAGI", 3, "07:00", "19:00"], // Rabu: shift panjang
+    ["PAGI", 3, "07:00", "19:00"], // Rabu: peralihan Pagi -> Sore (shift panjang)
     ["SORE", 4, "15:00", "23:00"], ["SORE", 5, "15:00", "23:00"], ["SORE", 6, "15:00", "23:00"],
     ["SORE", 0, "15:00", "23:00"], ["SORE", 1, "15:00", "23:00"], ["SORE", 2, "15:00", "23:00"],
+    ["SORE", 3, "19:00", "07:00"], // Rabu: peralihan Sore -> Malam (shift panjang)
     ["MALAM", 4, "23:00", "07:00"], ["MALAM", 5, "23:00", "07:00"], ["MALAM", 6, "23:00", "07:00"],
     ["MALAM", 0, "23:00", "07:00"], ["MALAM", 1, "23:00", "07:00"], ["MALAM", 2, "23:00", "07:00"],
-    ["MALAM", 3, "19:00", "07:00"], // Rabu malam mulai 19:00
+    // Rabu: regu Malam OFF serentak (tidak ada pola)
   ];
+  // Bersihkan pola lama agar entri yang dihapus tidak tertinggal.
+  await db.shiftPattern.deleteMany({ where: { shiftTypeId: { in: Object.values(shiftIds) } } });
   for (const [shift, dow, start, end] of patterns) {
-    await db.shiftPattern.upsert({
-      where: { shiftTypeId_dayOfWeek: { shiftTypeId: shiftIds[shift], dayOfWeek: dow } },
-      create: { shiftTypeId: shiftIds[shift], dayOfWeek: dow, startTime: start, endTime: end },
-      update: { startTime: start, endTime: end },
+    await db.shiftPattern.create({
+      data: { shiftTypeId: shiftIds[shift], dayOfWeek: dow, startTime: start, endTime: end },
     });
   }
 

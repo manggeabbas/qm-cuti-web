@@ -1,7 +1,8 @@
 /** Logika bisnis OFF (PRD §22–§23). */
 import db from "./db";
 import { getNumberSetting } from "./settings";
-import { addDays, dayOfWeek, startOfWeekMonday, toISODate } from "./dates";
+import { addDays, dayOfWeek, toISODate } from "./dates";
+import { getShiftRotationConfig, startOfShiftWeek } from "./shifts";
 
 export interface OffIssue {
   code: string;
@@ -33,8 +34,10 @@ export async function validateOffRequest(employeeId: number, date: Date): Promis
     return issues;
   }
 
-  // Maks 1 OFF individu per minggu (Senin–Minggu)
-  const weekStart = startOfWeekMonday(date);
+  // Maks 1 OFF individu per minggu operasional (mengikuti awal minggu rotasi,
+  // default Kamis–Rabu; Rabu sendiri OFF bersama).
+  const { weekStartDow } = await getShiftRotationConfig();
+  const weekStart = startOfShiftWeek(date, weekStartDow);
   const weekEnd = addDays(weekStart, 6);
   const existing = await db.offSchedule.findFirst({
     where: {
