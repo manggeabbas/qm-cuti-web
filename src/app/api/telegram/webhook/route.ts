@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     if (text.startsWith("/start")) {
       const code = text.split(/\s+/)[1] ?? "";
       if (!code) {
-        await sendTelegramMessage(chatId, "Halo! Ini bot notifikasi Cuti QM YWI.\nMinta kode pairing ke admin, lalu kirim: /start <KODE>");
+        await sendTelegramMessage(chatId, "Halo! Ini bot notifikasi TTRI.\nMinta kode pairing ke admin, lalu kirim: /start <KODE>");
         return ok({ handled: "help" });
       }
       const ids = await db.employee.findMany({ where: { status: "ACTIVE" }, select: { id: true } });

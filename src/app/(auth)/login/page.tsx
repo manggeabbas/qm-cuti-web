@@ -47,7 +47,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-2xl text-white">
             📋
           </div>
-          <h1 className="text-xl font-bold text-slate-900">Cuti QM YWI</h1>
+          <h1 className="text-xl font-bold text-slate-900">TTRI</h1>
           <p className="mt-1 text-sm text-slate-500">Pengajuan Cuti, Izin & Monitoring Jadwal</p>
         </div>
         <form onSubmit={submit} className="space-y-4">

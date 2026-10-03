@@ -158,7 +158,7 @@ export default function DashboardPage() {
     <div className="space-y-5">
       <PageHeader
         title={`Halo, ${me.employee?.name ?? me.username} 👋`}
-        subtitle="Selamat datang di aplikasi pengajuan cuti QM YWI."
+        subtitle="Selamat datang di aplikasi pengajuan cuti TTRI."
         breadcrumb={me.employee ? `NIK ${me.employee.nik} · ${me.employee.positionCode ?? "-"} · Regu ${me.employee.teamCode ?? "-"}` : undefined}
       />
       {error && <ErrorBox message={error} />}

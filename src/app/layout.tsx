@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Cuti QM YWI",
-    template: "%s · Cuti QM YWI",
+    default: "TTRI",
+    template: "%s · TTRI",
   },
-  description: "Web app pengajuan cuti dan monitoring jadwal QM YWI",
+  description: "Web app pengajuan cuti dan monitoring jadwal TTRI",
 };
 
 export const viewport: Viewport = {

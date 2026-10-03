@@ -136,7 +136,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-sm text-white">📋</span>
-          <span className="font-bold text-slate-800">Cuti QM YWI</span>
+          <span className="font-bold text-slate-800">TTRI</span>
         </Link>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -153,7 +153,7 @@ export default function AppShell({ user, children }: { user: SessionUser; childr
         <Link href="/dashboard" className="mb-4 flex items-center gap-2 rounded-lg px-2 py-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-lg text-white">📋</span>
           <div>
-            <p className="text-sm font-bold leading-tight text-slate-800">Cuti QM YWI</p>
+            <p className="text-sm font-bold leading-tight text-slate-800">TTRI</p>
             <p className="text-[11px] text-slate-400">Leave Management</p>
           </div>
         </Link>
