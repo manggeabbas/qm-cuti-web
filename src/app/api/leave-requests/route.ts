@@ -181,7 +181,7 @@ export async function POST(req: Request) {
       ...getRequestMeta(req),
     });
 
-    return ok({ request: created }, 201);
+    return ok({ id: created.id, request: created }, 201);
   } catch (e) {
     if (e instanceof z.ZodError) {
       return fail("VALIDATION_ERROR", e.issues[0]?.message ?? "Input tidak valid.", 422);
