@@ -329,7 +329,7 @@ export default function KalenderPage() {
               {cells.map((iso) => {
                 const dateObj = parseISODate(iso);
                 const dayNum = dateObj.getDate();
-                const dow = dateObj.getUTCDay();
+                const dow = dateObj.getDay(); // parseISODate versi lokal -> pakai getDay() lokal
                 const inMonth = dateObj.getMonth() === month;
                 const evs = byDay.get(iso) ?? [];
                 const isSel = selected === iso;
